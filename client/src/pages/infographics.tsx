@@ -800,11 +800,11 @@ export default function Infographics() {
   ];
 
   return (
-    <div className="p-6 pl-14 lg:pl-6 space-y-6 overflow-y-auto">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="p-5 pl-14 lg:pl-8 pr-5 lg:pr-8 space-y-5 min-h-screen pb-12">
+      <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
         <div>
-          <h2 className="text-lg font-semibold">Infographics</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-bold text-foreground">Infographics</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Generate shareable travel summaries — flights & trains combined
           </p>
         </div>
@@ -813,17 +813,19 @@ export default function Infographics() {
             onClick={handleShare}
             variant="outline"
             size="sm"
+            className="rounded-xl gap-1.5"
             data-testid="button-share"
           >
-            <Share2 className="w-4 h-4 mr-1" /> Share
+            <Share2 className="w-4 h-4" /> Share
           </Button>
           <Button
             onClick={handleDownload}
             variant="outline"
             size="sm"
+            className="rounded-xl gap-1.5"
             data-testid="button-download"
           >
-            <Download className="w-4 h-4 mr-1" /> Download PNG
+            <Download className="w-4 h-4" /> PNG
           </Button>
         </div>
       </div>
@@ -834,7 +836,7 @@ export default function Infographics() {
           value={selectedType}
           onValueChange={(v) => setSelectedType(v as InfographicType)}
         >
-          <SelectTrigger className="w-52" data-testid="select-infographic-type">
+          <SelectTrigger className="w-52 rounded-xl" data-testid="select-infographic-type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -847,7 +849,7 @@ export default function Infographics() {
         </Select>
 
         <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="w-32" data-testid="select-year">
+          <SelectTrigger className="w-32 rounded-xl" data-testid="select-year">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

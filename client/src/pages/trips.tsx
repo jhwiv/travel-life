@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plane, TrainFront, Plus, Trash2, Search, Filter } from "lucide-react";
+import { Plane, TrainFront, Plus, Trash2, Search, Filter, MapPin } from "lucide-react";
 import type { Trip, InsertTrip } from "@shared/schema";
 import { StationAutocomplete } from "@/components/station-autocomplete";
 import type { TrainStation } from "@/lib/european-stations";
@@ -134,20 +134,23 @@ export default function Trips() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const flightCount = trips.filter((t) => t.type === "flight").length;
+  const trainCount = trips.filter((t) => t.type === "train").length;
+
   return (
-    <div className="p-6 pl-14 lg:pl-6 space-y-4 overflow-y-auto">
+    <div className="p-5 pl-14 lg:pl-8 pr-5 lg:pr-8 space-y-5 min-h-screen pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
         <div>
-          <h2 className="text-lg font-semibold">All Trips</h2>
-          <p className="text-sm text-muted-foreground">
-            {trips.length} trip{trips.length !== 1 ? "s" : ""} recorded
+          <h2 className="text-lg font-bold text-foreground">Trips</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {trips.length} total · {flightCount} flights · {trainCount} trains
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-add-trip" size="sm">
-              <Plus className="w-4 h-4 mr-1" /> Add Trip
+            <Button data-testid="button-add-trip" size="sm" className="gap-1.5 rounded-xl px-4 shadow-sm">
+              <Plus className="w-4 h-4" /> Add Trip
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
@@ -190,9 +193,7 @@ export default function Trips() {
                       data-testid="input-flight-number"
                       placeholder="e.g. UA123"
                       value={formData.flightNumber || ""}
-                      onChange={(e) =>
-                        updateField("flightNumber", e.target.value)
-                      }
+                      onChange={(e) => updateField("flightNumber", e.target.value)}
                     />
                   </div>
                 </div>
@@ -207,9 +208,7 @@ export default function Trips() {
                       data-testid="input-train-operator"
                       placeholder="e.g. Eurostar"
                       value={formData.trainOperator || ""}
-                      onChange={(e) =>
-                        updateField("trainOperator", e.target.value)
-                      }
+                      onChange={(e) => updateField("trainOperator", e.target.value)}
                     />
                   </div>
                   <div>
@@ -218,9 +217,7 @@ export default function Trips() {
                       data-testid="input-train-number"
                       placeholder="e.g. 9024"
                       value={formData.trainNumber || ""}
-                      onChange={(e) =>
-                        updateField("trainNumber", e.target.value)
-                      }
+                      onChange={(e) => updateField("trainNumber", e.target.value)}
                     />
                   </div>
                   <div className="col-span-2">
@@ -244,7 +241,7 @@ export default function Trips() {
 
               {/* Departure */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Departure
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
@@ -252,9 +249,7 @@ export default function Trips() {
                     data-testid="input-departure-city"
                     placeholder="City"
                     value={formData.departureCity}
-                    onChange={(e) =>
-                      updateField("departureCity", e.target.value)
-                    }
+                    onChange={(e) => updateField("departureCity", e.target.value)}
                     required
                   />
                   {formData.type === "train" ? (
@@ -275,9 +270,7 @@ export default function Trips() {
                       data-testid="input-departure-code"
                       placeholder="IATA (EWR)"
                       value={formData.departureCode}
-                      onChange={(e) =>
-                        updateField("departureCode", e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => updateField("departureCode", e.target.value.toUpperCase())}
                       required
                     />
                   )}
@@ -285,9 +278,7 @@ export default function Trips() {
                     data-testid="input-departure-country"
                     placeholder="Country"
                     value={formData.departureCountry}
-                    onChange={(e) =>
-                      updateField("departureCountry", e.target.value)
-                    }
+                    onChange={(e) => updateField("departureCountry", e.target.value)}
                     required
                   />
                 </div>
@@ -296,18 +287,14 @@ export default function Trips() {
                     data-testid="input-departure-date"
                     type="date"
                     value={formData.departureDate}
-                    onChange={(e) =>
-                      updateField("departureDate", e.target.value)
-                    }
+                    onChange={(e) => updateField("departureDate", e.target.value)}
                     required
                   />
                   <Input
                     data-testid="input-departure-time"
                     type="time"
                     value={formData.departureTime}
-                    onChange={(e) =>
-                      updateField("departureTime", e.target.value)
-                    }
+                    onChange={(e) => updateField("departureTime", e.target.value)}
                     required
                   />
                 </div>
@@ -315,7 +302,7 @@ export default function Trips() {
 
               {/* Arrival */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">
                   Arrival
                 </Label>
                 <div className="grid grid-cols-3 gap-2">
@@ -323,9 +310,7 @@ export default function Trips() {
                     data-testid="input-arrival-city"
                     placeholder="City"
                     value={formData.arrivalCity}
-                    onChange={(e) =>
-                      updateField("arrivalCity", e.target.value)
-                    }
+                    onChange={(e) => updateField("arrivalCity", e.target.value)}
                     required
                   />
                   {formData.type === "train" ? (
@@ -346,9 +331,7 @@ export default function Trips() {
                       data-testid="input-arrival-code"
                       placeholder="IATA (LHR)"
                       value={formData.arrivalCode}
-                      onChange={(e) =>
-                        updateField("arrivalCode", e.target.value.toUpperCase())
-                      }
+                      onChange={(e) => updateField("arrivalCode", e.target.value.toUpperCase())}
                       required
                     />
                   )}
@@ -356,9 +339,7 @@ export default function Trips() {
                     data-testid="input-arrival-country"
                     placeholder="Country"
                     value={formData.arrivalCountry}
-                    onChange={(e) =>
-                      updateField("arrivalCountry", e.target.value)
-                    }
+                    onChange={(e) => updateField("arrivalCountry", e.target.value)}
                     required
                   />
                 </div>
@@ -367,18 +348,14 @@ export default function Trips() {
                     data-testid="input-arrival-date"
                     type="date"
                     value={formData.arrivalDate}
-                    onChange={(e) =>
-                      updateField("arrivalDate", e.target.value)
-                    }
+                    onChange={(e) => updateField("arrivalDate", e.target.value)}
                     required
                   />
                   <Input
                     data-testid="input-arrival-time"
                     type="time"
                     value={formData.arrivalTime}
-                    onChange={(e) =>
-                      updateField("arrivalTime", e.target.value)
-                    }
+                    onChange={(e) => updateField("arrivalTime", e.target.value)}
                     required
                   />
                 </div>
@@ -393,9 +370,7 @@ export default function Trips() {
                     type="number"
                     min="1"
                     value={formData.duration || ""}
-                    onChange={(e) =>
-                      updateField("duration", parseInt(e.target.value) || 0)
-                    }
+                    onChange={(e) => updateField("duration", parseInt(e.target.value) || 0)}
                     required
                   />
                 </div>
@@ -407,9 +382,7 @@ export default function Trips() {
                     min="0"
                     step="0.1"
                     value={formData.distance || ""}
-                    onChange={(e) =>
-                      updateField("distance", parseFloat(e.target.value) || 0)
-                    }
+                    onChange={(e) => updateField("distance", parseFloat(e.target.value) || 0)}
                   />
                 </div>
               </div>
@@ -445,7 +418,7 @@ export default function Trips() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full rounded-xl"
                 disabled={createMutation.isPending}
                 data-testid="button-submit-trip"
               >
@@ -458,18 +431,18 @@ export default function Trips() {
 
       {/* Filters */}
       <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             data-testid="input-search"
             placeholder="Search trips..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
+            className="pl-9 rounded-xl"
           />
         </div>
         <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-32" data-testid="select-filter-type">
+          <SelectTrigger className="w-32 rounded-xl" data-testid="select-filter-type">
             <Filter className="w-4 h-4 mr-1" />
             <SelectValue />
           </SelectTrigger>
@@ -485,129 +458,120 @@ export default function Trips() {
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
+            <div key={i} className="h-20 bg-muted/40 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : filteredTrips.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <MapPin className="w-10 h-10 text-muted-foreground/30 mb-3" />
+          <p className="text-sm font-medium text-foreground mb-1">
+            {trips.length === 0 ? "No trips yet" : "No results"}
+          </p>
+          <p className="text-xs text-muted-foreground">
             {trips.length === 0
-              ? "No trips yet. Click 'Add Trip' to record your first journey."
-              : "No trips match your search."}
-          </CardContent>
-        </Card>
+              ? "Click 'Add Trip' to record your first journey."
+              : "Try a different search term."}
+          </p>
+        </div>
       ) : (
         <div className="space-y-2">
           {filteredTrips.map((trip) => (
-            <Card
+            <div
               key={trip.id}
-              className="hover:shadow-sm transition-shadow"
+              className="rounded-2xl border border-border/60 bg-card p-4 hover:shadow-md hover:border-border transition-all"
               data-testid={`trip-card-${trip.id}`}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex items-center justify-center w-9 h-9 rounded-lg ${
-                        trip.type === "flight"
-                          ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
-                          : "bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400"
-                      }`}
-                    >
-                      {trip.type === "flight" ? (
-                        <Plane className="w-4 h-4" />
-                      ) : (
-                        <TrainFront className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">
-                          {trip.departureCode}
-                        </span>
-                        <span className="text-xs text-muted-foreground">→</span>
-                        <span className="text-sm font-semibold">
-                          {trip.arrivalCode}
-                        </span>
-                        <Badge
-                          variant={
-                            trip.status === "completed"
-                              ? "secondary"
-                              : trip.status === "upcoming"
-                              ? "default"
-                              : "destructive"
-                          }
-                          className="text-[10px] px-1.5 py-0"
-                        >
-                          {trip.status}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {trip.departureCity} → {trip.arrivalCity}
-                        {" · "}
-                        {trip.type === "flight"
-                          ? [trip.airline, trip.flightNumber]
-                              .filter(Boolean)
-                              .join(" ")
-                          : [trip.trainOperator, trip.trainNumber]
-                              .filter(Boolean)
-                              .join(" ")}
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-xl shrink-0 ${
+                      trip.type === "flight"
+                        ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
+                        : "bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400"
+                    }`}
+                  >
+                    {trip.type === "flight" ? (
+                      <Plane className="w-[18px] h-[18px]" />
+                    ) : (
+                      <TrainFront className="w-[18px] h-[18px]" />
+                    )}
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm tabular-nums">
-                        {new Date(trip.departureDate).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground tabular-nums">
-                        {trip.distance
-                          ? `${Math.round(trip.distance).toLocaleString()} mi`
-                          : "—"}{" "}
-                        · {formatDuration(trip.duration)}
-                      </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold">{trip.departureCode}</span>
+                      <span className="text-xs text-muted-foreground">→</span>
+                      <span className="text-sm font-bold">{trip.arrivalCode}</span>
+                      <Badge
+                        variant={
+                          trip.status === "completed"
+                            ? "secondary"
+                            : trip.status === "upcoming"
+                            ? "default"
+                            : "destructive"
+                        }
+                        className="text-[9px] px-1.5 py-0 rounded-md"
+                      >
+                        {trip.status}
+                      </Badge>
                     </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          data-testid={`button-delete-${trip.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Trip</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Remove {trip.departureCode} → {trip.arrivalCode} from{" "}
-                            {new Date(trip.departureDate).toLocaleDateString()}?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(trip.id)}
-                            className="bg-destructive text-destructive-foreground"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {trip.departureCity} → {trip.arrivalCity}
+                      {" · "}
+                      {trip.type === "flight"
+                        ? [trip.airline, trip.flightNumber].filter(Boolean).join(" ")
+                        : [trip.trainOperator, trip.trainNumber].filter(Boolean).join(" ")}
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-4">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm tabular-nums font-medium">
+                      {new Date(trip.departureDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground tabular-nums">
+                      {trip.distance
+                        ? `${Math.round(trip.distance).toLocaleString()} mi`
+                        : "—"}{" "}
+                      · {formatDuration(trip.duration)}
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-lg"
+                        data-testid={`button-delete-${trip.id}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Trip</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Remove {trip.departureCode} → {trip.arrivalCode} from{" "}
+                          {new Date(trip.departureDate).toLocaleDateString()}?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(trip.id)}
+                          className="bg-destructive text-destructive-foreground"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}

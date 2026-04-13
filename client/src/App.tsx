@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Trips from "@/pages/trips";
 import Infographics from "@/pages/infographics";
@@ -21,12 +22,12 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-function TravelLifeLogo() {
+function TravelLifeLogo({ className = "w-7 h-7" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 32 32"
       fill="none"
-      className="w-8 h-8"
+      className={className}
       aria-label="Travel Life"
     >
       <circle cx="16" cy="16" r="15" stroke="currentColor" strokeWidth="1.5" />
@@ -60,7 +61,7 @@ function TravelLifeLogo() {
 }
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/trips", label: "Trips", icon: RouteIcon },
   { path: "/infographics", label: "Infographics", icon: Image },
 ];
@@ -75,7 +76,7 @@ function Sidebar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden bg-background border rounded-lg p-2 shadow-sm"
+        className="fixed top-3 left-3 z-50 lg:hidden bg-background/90 backdrop-blur border rounded-xl p-2 shadow-sm"
         data-testid="button-mobile-menu"
       >
         {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -84,7 +85,7 @@ function Sidebar() {
       {/* Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -92,20 +93,22 @@ function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-full w-56 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
+          "fixed top-0 left-0 z-40 h-full w-[220px] bg-sidebar/95 backdrop-blur-md border-r border-sidebar-border flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Brand */}
-        <div className="flex items-center gap-2.5 px-4 h-14 border-b border-sidebar-border">
-          <div className="text-primary">
-            <TravelLifeLogo />
+        <Link href="/" onClick={() => setMobileOpen(false)}>
+          <div className="flex items-center gap-2.5 px-5 h-14 border-b border-sidebar-border cursor-pointer hover:bg-sidebar-accent/50 transition-colors">
+            <div className="text-primary">
+              <TravelLifeLogo />
+            </div>
+            <span className="text-sm font-bold tracking-tight">Travel Life</span>
           </div>
-          <span className="text-sm font-semibold tracking-tight">Travel Life</span>
-        </div>
+        </Link>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 px-2 space-y-0.5">
+        <nav className="flex-1 py-4 px-3 space-y-1">
           {navItems.map((item) => {
             const isActive = location === item.path;
             return (
@@ -116,14 +119,14 @@ function Sidebar() {
               >
                 <div
                   className={cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                    "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer",
                     isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                      ? "bg-primary/10 text-primary shadow-sm"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/70"
                   )}
                   data-testid={`nav-${item.label.toLowerCase()}`}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className="w-[18px] h-[18px]" />
                   {item.label}
                 </div>
               </Link>
@@ -135,18 +138,18 @@ function Sidebar() {
         <div className="px-3 py-3 border-t border-sidebar-border">
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent/70 transition-colors"
             data-testid="button-theme-toggle"
           >
             {theme === "dark" ? (
-              <Sun className="w-4 h-4" />
+              <Sun className="w-[18px] h-[18px]" />
             ) : (
-              <Moon className="w-4 h-4" />
+              <Moon className="w-[18px] h-[18px]" />
             )}
             {theme === "dark" ? "Light Mode" : "Dark Mode"}
           </button>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2 px-3">
-            Travel Life v1.0
+          <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mt-2 px-3 opacity-60">
+            Travel Life v2.0
           </p>
         </div>
       </aside>
@@ -154,26 +157,26 @@ function Sidebar() {
   );
 }
 
-function AppRouter() {
-  return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/trips" component={Trips} />
-      <Route path="/infographics" component={Infographics} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-function AppLayout() {
+/** Pages that use sidebar layout */
+function WithSidebar({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
-        <AppRouter />
+        {children}
       </main>
     </div>
   );
+}
+
+function DashboardPage() {
+  return <WithSidebar><Dashboard /></WithSidebar>;
+}
+function TripsPage() {
+  return <WithSidebar><Trips /></WithSidebar>;
+}
+function InfographicsPage() {
+  return <WithSidebar><Infographics /></WithSidebar>;
 }
 
 function App() {
@@ -183,7 +186,13 @@ function App() {
         <ThemeProvider>
           <Toaster />
           <Router hook={useHashLocation}>
-            <AppLayout />
+            <Switch>
+              <Route path="/" component={Landing} />
+              <Route path="/dashboard" component={DashboardPage} />
+              <Route path="/trips" component={TripsPage} />
+              <Route path="/infographics" component={InfographicsPage} />
+              <Route component={NotFound} />
+            </Switch>
           </Router>
         </ThemeProvider>
       </TooltipProvider>
