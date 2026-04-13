@@ -48,7 +48,16 @@ export default function Trips() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"flight" | "train">("flight");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>(() => {
+    const hash = window.location.hash;
+    const qIdx = hash.indexOf("?");
+    if (qIdx !== -1) {
+      const params = new URLSearchParams(hash.substring(qIdx));
+      const f = params.get("filter");
+      if (f === "flight" || f === "train") return f;
+    }
+    return "all";
+  });
 
   const { data: trips = [], isLoading } = useQuery<Trip[]>({
     queryKey: ["/api/trips"],

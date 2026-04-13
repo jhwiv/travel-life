@@ -311,14 +311,15 @@ export default function Landing() {
             {/* KPI Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
               {[
-                { icon: Route, value: analytics.totalTrips, label: "Trips", color: "#8b5cf6" },
-                { icon: Plane, value: analytics.totalFlights, label: "Flights", color: "#6366f1" },
-                { icon: TrainFront, value: analytics.totalTrains, label: "Train Rides", color: "#fbbf24" },
-                { icon: Globe, value: analytics.uniqueCountries, label: "Countries", color: "#c084fc" },
-              ].map(({ icon: Icon, value, label, color }) => (
-                <div
+                { icon: Route, value: analytics.totalTrips, label: "Trips", color: "#8b5cf6", href: "/trips" },
+                { icon: Plane, value: analytics.totalFlights, label: "Flights", color: "#6366f1", href: "/trips?filter=flight" },
+                { icon: TrainFront, value: analytics.totalTrains, label: "Train Rides", color: "#fbbf24", href: "/trips?filter=train" },
+                { icon: Globe, value: analytics.uniqueCountries, label: "Countries", color: "#c084fc", href: "/infographics" },
+              ].map(({ icon: Icon, value, label, color, href }) => (
+                <button
                   key={label}
-                  className="relative rounded-2xl p-4 text-center backdrop-blur-md transition-all hover:scale-[1.02]"
+                  onClick={() => navigate(href)}
+                  className="relative rounded-2xl p-4 text-center backdrop-blur-md transition-all duration-200 hover:scale-[1.03] hover:brightness-125 active:scale-[0.97] cursor-pointer"
                   style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}
                 >
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2.5" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -326,7 +327,7 @@ export default function Landing() {
                   </div>
                   <p className="text-2xl font-bold tabular-nums text-white">{value}</p>
                   <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium mt-0.5">{label}</p>
-                </div>
+                </button>
               ))}
             </div>
 
