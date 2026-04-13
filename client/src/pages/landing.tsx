@@ -324,18 +324,18 @@ export default function Landing() {
           </div>
 
           {/* Title */}
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-4" style={{ background: "linear-gradient(135deg, #ffffff 0%, #e9d5ff 40%, #c4b5fd 60%, #a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-4" style={{ background: "linear-gradient(135deg, #ffffff 0%, #e9d5ff 40%, #c4b5fd 60%, #a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Travel Life
           </h1>
-          <p className="text-base md:text-lg text-purple-200/40 max-w-md mx-auto mb-8 leading-relaxed">
+          <p className="text-sm sm:text-base md:text-lg text-purple-200/40 max-w-xs sm:max-w-md mx-auto mb-8 leading-relaxed px-2">
             Track every flight and train ride. Visualize your journeys with stunning infographics.
           </p>
 
           {/* Primary action buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+          <div className="flex flex-row items-center justify-center gap-3 mb-6 px-4">
             <AddFlightDialog
               trigger={
-                <Button size="lg" className="gap-2 px-7 text-sm font-semibold shadow-lg w-full sm:w-auto rounded-xl" style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)", border: "none" }}>
+                <Button size="lg" className="gap-2 px-6 text-sm font-semibold shadow-lg flex-1 sm:flex-none rounded-xl" style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)", border: "none" }}>
                   <Plus className="w-4 h-4" />
                   <Plane className="w-4 h-4" />
                   Add Flight
@@ -344,7 +344,7 @@ export default function Landing() {
             />
             <AddTrainDialog
               trigger={
-                <Button size="lg" className="gap-2 px-7 text-sm font-semibold shadow-lg w-full sm:w-auto rounded-xl" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
+                <Button size="lg" className="gap-2 px-6 text-sm font-semibold shadow-lg flex-1 sm:flex-none rounded-xl" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
                   <Plus className="w-4 h-4" />
                   <TrainFront className="w-4 h-4" />
                   Add Train
@@ -354,49 +354,49 @@ export default function Landing() {
           </div>
 
           {/* Navigation buttons — always visible, functional */}
-          <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6 px-4">
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 px-5 text-sm font-semibold border-purple-400/20 text-white/70 hover:bg-purple-500/10 hover:text-white hover:border-purple-400/30 rounded-xl"
+              className="gap-1.5 px-3 sm:px-5 text-xs sm:text-sm font-semibold border-purple-400/20 text-white/70 hover:bg-purple-500/10 hover:text-white hover:border-purple-400/30 rounded-xl"
               onClick={() => navigate("/dashboard")}
               data-testid="nav-dashboard"
             >
-              <BarChart3 className="w-4 h-4" />
+              <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               Dashboard
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 px-5 text-sm font-semibold border-purple-400/20 text-white/70 hover:bg-purple-500/10 hover:text-white hover:border-purple-400/30 rounded-xl"
+              className="gap-1.5 px-3 sm:px-5 text-xs sm:text-sm font-semibold border-purple-400/20 text-white/70 hover:bg-purple-500/10 hover:text-white hover:border-purple-400/30 rounded-xl"
               onClick={() => navigate("/infographics")}
               data-testid="nav-infographics"
             >
-              <Image className="w-4 h-4" />
+              <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               Infographics
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="gap-2 px-5 text-sm font-semibold border-purple-400/20 text-white/70 hover:bg-purple-500/10 hover:text-white hover:border-purple-400/30 rounded-xl"
+              className="gap-1.5 px-3 sm:px-5 text-xs sm:text-sm font-semibold border-purple-400/20 text-white/70 hover:bg-purple-500/10 hover:text-white hover:border-purple-400/30 rounded-xl"
               onClick={() => navigate("/trips")}
               data-testid="nav-trips"
             >
-              <Route className="w-4 h-4" />
+              <Route className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               All Trips
             </Button>
           </div>
 
           {/* Feature pills */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-8">
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-8 px-4">
             {[
               { icon: Plane, label: "Flights", color: "#8b5cf6" },
               { icon: TrainFront, label: "Trains", color: "#fbbf24" },
               { icon: BarChart3, label: "Analytics", color: "#06b6d4" },
               { icon: Sparkles, label: "Infographics", color: "#c084fc" },
             ].map(({ icon: Icon, label, color }) => (
-              <div key={label} className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white/60" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}>
-                <Icon className="w-4 h-4" style={{ color }} />
+              <div key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-white/60" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}>
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color }} />
                 {label}
               </div>
             ))}
