@@ -1,4 +1,6 @@
 // LocalStorage-backed trip store — data persists across sessions
+import seedTrips from "./trip-data.json";
+
 const STORAGE_KEY = "travel-life-trips";
 
 export interface Trip {
@@ -69,7 +71,12 @@ function toCamelCase(trip: any): Trip & Record<string, any> {
 function loadFromStorage(): (Trip & Record<string, any>)[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      // Seed with pre-populated flight data on first visit
+      const seeded = (seedTrips as any[]).map(toCamelCase);
+      saveToStorage(seeded);
+      return seeded;
+    }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.map(toCamelCase);

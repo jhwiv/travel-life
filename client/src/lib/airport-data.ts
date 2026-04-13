@@ -52,6 +52,10 @@ export const AIRPORTS: Record<string, AirportInfo> = {
   "OAK": { name: "Oakland International", city: "Oakland", country: "United States", lat: 37.7213, lon: -122.2208 },
   "ALB": { name: "Albany International", city: "Albany", country: "United States", lat: 42.7483, lon: -73.8017 },
   "ABQ": { name: "Albuquerque International Sunport", city: "Albuquerque", country: "United States", lat: 35.0402, lon: -106.6091 },
+  "PBI": { name: "Palm Beach International", city: "West Palm Beach", country: "United States", lat: 26.6832, lon: -80.0956 },
+  "RSW": { name: "Southwest Florida International", city: "Fort Myers", country: "United States", lat: 26.5362, lon: -81.7552 },
+  "EYW": { name: "Key West International", city: "Key West", country: "United States", lat: 24.5561, lon: -81.7596 },
+  "SRQ": { name: "Sarasota-Bradenton International", city: "Sarasota", country: "United States", lat: 27.3954, lon: -82.5544 },
 
   // --- United Kingdom ---
   "LHR": { name: "Heathrow", city: "London", country: "United Kingdom", lat: 51.4700, lon: -0.4543 },
@@ -151,6 +155,9 @@ export const AIRPORTS: Record<string, AirportInfo> = {
   "YUL": { name: "Montréal-Pierre Elliott Trudeau International", city: "Montreal", country: "Canada", lat: 45.4706, lon: -73.7408 },
   "YOW": { name: "Ottawa Macdonald-Cartier International", city: "Ottawa", country: "Canada", lat: 45.3225, lon: -75.6692 },
   "YYC": { name: "Calgary International", city: "Calgary", country: "Canada", lat: 51.1215, lon: -114.0076 },
+
+  // --- Caribbean ---
+  "AUA": { name: "Queen Beatrix International", city: "Oranjestad", country: "Aruba", lat: 12.5014, lon: -70.0152 },
 
   // --- Latin America ---
   "MEX": { name: "Mexico City International", city: "Mexico City", country: "Mexico", lat: 19.4363, lon: -99.0721 },
