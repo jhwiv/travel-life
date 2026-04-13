@@ -800,71 +800,87 @@ export default function Infographics() {
   ];
 
   return (
-    <div className="p-5 pl-14 lg:pl-8 pr-5 lg:pr-8 space-y-5 min-h-screen pb-12">
-      <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
-        <div>
-          <h2 className="text-lg font-bold text-foreground">Infographics</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Generate shareable travel summaries — flights & trains combined
-          </p>
+    <div className="min-h-screen pb-12">
+      {/* Gradient header */}
+      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-8" style={{ background: "linear-gradient(135deg, hsl(280, 50%, 30%) 0%, hsl(260, 55%, 35%) 30%, hsl(240, 50%, 35%) 60%, hsl(220, 55%, 30%) 100%)" }}>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full" style={{ background: "radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)" }} />
+          <svg className="absolute inset-0 w-full h-full opacity-[0.05]" aria-hidden>
+            <defs>
+              <pattern id="infog-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1" fill="white" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#infog-dots)" />
+          </svg>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handleShare}
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-1.5"
-            data-testid="button-share"
-          >
-            <Share2 className="w-4 h-4" /> Share
-          </Button>
-          <Button
-            onClick={handleDownload}
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-1.5"
-            data-testid="button-download"
-          >
-            <Download className="w-4 h-4" /> PNG
-          </Button>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-white">Infographics</h2>
+              <p className="text-sm text-white/60 mt-1">
+                Generate shareable travel summaries — flights & trains combined
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleShare}
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-1.5 border-white/15 text-white/80 hover:bg-white/10 hover:text-white bg-transparent"
+                data-testid="button-share"
+              >
+                <Share2 className="w-4 h-4" /> Share
+              </Button>
+              <Button
+                onClick={handleDownload}
+                variant="outline"
+                size="sm"
+                className="rounded-xl gap-1.5 border-white/15 text-white/80 hover:bg-white/10 hover:text-white bg-transparent"
+                data-testid="button-download"
+              >
+                <Download className="w-4 h-4" /> PNG
+              </Button>
+            </div>
+          </div>
+
+          {/* Controls integrated into header */}
+          <div className="flex items-center gap-3 flex-wrap mt-4">
+            <Select
+              value={selectedType}
+              onValueChange={(v) => setSelectedType(v as InfographicType)}
+            >
+              <SelectTrigger className="w-52 rounded-xl bg-white/10 border-white/15 text-white [&>svg]:text-white/60" data-testid="select-infographic-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {infographicOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32 rounded-xl bg-white/10 border-white/15 text-white [&>svg]:text-white/60" data-testid="select-year">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                {years.map((y) => (
+                  <SelectItem key={y} value={y}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
-
-      {/* Controls */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <Select
-          value={selectedType}
-          onValueChange={(v) => setSelectedType(v as InfographicType)}
-        >
-          <SelectTrigger className="w-52 rounded-xl" data-testid="select-infographic-type">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {infographicOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger className="w-32 rounded-xl" data-testid="select-year">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Time</SelectItem>
-            {years.map((y) => (
-              <SelectItem key={y} value={y}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Infographic Preview */}
-      <div className="flex justify-center">
+      <div className="flex justify-center px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 -mt-4">
         <div ref={infographicRef} className="w-full max-w-md">
           {selectedType === "travel-passport" && (
             <TravelPassport trips={trips} year={selectedYear} />

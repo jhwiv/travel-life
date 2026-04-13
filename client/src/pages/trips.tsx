@@ -138,21 +138,33 @@ export default function Trips() {
   const trainCount = trips.filter((t) => t.type === "train").length;
 
   return (
-    <div className="p-5 pl-14 lg:pl-8 pr-5 lg:pr-8 space-y-5 min-h-screen pb-12">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 pt-1">
-        <div>
-          <h2 className="text-lg font-bold text-foreground">Trips</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {trips.length} total · {flightCount} flights · {trainCount} trains
-          </p>
+    <div className="min-h-screen pb-12">
+      {/* Gradient header */}
+      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-8" style={{ background: "linear-gradient(135deg, hsl(160, 55%, 30%) 0%, hsl(180, 50%, 30%) 30%, hsl(200, 60%, 32%) 60%, hsl(210, 55%, 30%) 100%)" }}>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-64 h-64 rounded-full" style={{ background: "radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)" }} />
+          <svg className="absolute inset-0 w-full h-full opacity-[0.05]" aria-hidden>
+            <defs>
+              <pattern id="trips-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="2" cy="2" r="1" fill="white" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#trips-dots)" />
+          </svg>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-trip" size="sm" className="gap-1.5 rounded-xl px-4 shadow-sm">
-              <Plus className="w-4 h-4" /> Add Trip
-            </Button>
-          </DialogTrigger>
+        <div className="relative z-10 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-white">Trips</h2>
+            <p className="text-sm text-white/60 mt-1">
+              {trips.length} total · {flightCount} flights · {trainCount} trains
+            </p>
+          </div>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-trip" size="sm" className="gap-1.5 rounded-xl px-4 shadow-lg" style={{ background: "linear-gradient(135deg, #0ea5e9, #6366f1)", border: "none" }}>
+                <Plus className="w-4 h-4" /> Add Trip
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Trip</DialogTitle>
@@ -426,9 +438,11 @@ export default function Trips() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
+      <div className="px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 -mt-4 space-y-5">
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-sm">
@@ -575,6 +589,7 @@ export default function Trips() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
