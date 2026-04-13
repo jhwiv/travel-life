@@ -185,7 +185,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 25%, #0f1628 50%, #0a1628 75%, #0a0a1a 100%)" }}>
       {/* Hero Section */}
-      <div className="relative flex-1 flex flex-col items-center justify-center px-5 py-10 overflow-hidden">
+      <div className="relative flex-1 flex flex-col items-center justify-center px-5 py-6 sm:py-10 overflow-hidden">
         <WorldMapSVG />
 
         {/* Gradient orbs */}
@@ -400,8 +400,8 @@ export default function Landing() {
 
         {/* Empty state */}
         {!hasData && (
-          <div className="relative z-10 w-full max-w-md mx-auto text-center mt-2">
-            <div className="rounded-2xl p-8 backdrop-blur-md" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}>
+          <div className="relative z-10 w-full max-w-md mx-auto text-center flex-1 flex items-center">
+            <div className="rounded-2xl p-8 backdrop-blur-md w-full" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}>
               <Globe className="w-12 h-12 text-purple-400/30 mx-auto mb-4" />
               <p className="text-white/40 text-sm leading-relaxed">
                 Add your first flight or train ride to start tracking your journeys.
@@ -412,7 +412,7 @@ export default function Landing() {
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
+      <div className="px-6 py-4 mt-auto" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <p className="text-[10px] text-white/15 uppercase tracking-wider">Travel Life v3.0</p>
           <p className="text-[10px] text-white/15">Flights · Trains · Analytics</p>

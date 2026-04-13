@@ -369,7 +369,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen pb-16" style={{ background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 30%, #0f1628 60%, #0a0a1a 100%)" }}>
       {/* Sticky year tabs */}
-      <div className="sticky top-0 z-30 px-4 pt-3 pb-2" style={{ background: "linear-gradient(180deg, rgba(10,10,26,0.98) 0%, rgba(10,10,26,0.9) 80%, transparent 100%)" }}>
+      <div className="sticky top-0 z-30 pl-14 lg:pl-4 pr-4 pt-3 pb-2" style={{ background: "linear-gradient(180deg, rgba(10,10,26,0.98) 0%, rgba(10,10,26,0.9) 80%, transparent 100%)" }}>
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
           <YearTab label="ALL-TIME" active={selectedYear === "all"} onClick={() => setSelectedYear("all")} />
           {years.map(y => (
@@ -378,7 +378,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="px-4 pt-2 max-w-2xl mx-auto">
+      <div className="pl-14 lg:pl-4 pr-4 pt-2 max-w-2xl mx-auto">
         {/* World Map */}
         <WorldMapHero trips={filteredTrips} />
 
