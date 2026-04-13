@@ -390,15 +390,21 @@ export default function Landing() {
           {/* Feature pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 mb-8 px-4">
             {[
-              { icon: Plane, label: "Flights", color: "#8b5cf6" },
-              { icon: TrainFront, label: "Trains", color: "#fbbf24" },
-              { icon: BarChart3, label: "Analytics", color: "#06b6d4" },
-              { icon: Sparkles, label: "Infographics", color: "#c084fc" },
-            ].map(({ icon: Icon, label, color }) => (
-              <div key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-white/60" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}>
+              { icon: Plane, label: "Flights", color: "#8b5cf6", path: "/trips" },
+              { icon: TrainFront, label: "Trains", color: "#fbbf24", path: "/trips" },
+              { icon: BarChart3, label: "Analytics", color: "#06b6d4", path: "/dashboard" },
+              { icon: Sparkles, label: "Infographics", color: "#c084fc", path: "/infographics" },
+            ].map(({ icon: Icon, label, color, path }) => (
+              <button
+                key={label}
+                onClick={() => navigate(path)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-white/60 hover:text-white/90 transition-colors cursor-pointer"
+                style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}
+                data-testid={`pill-${label.toLowerCase()}`}
+              >
                 <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color }} />
                 {label}
-              </div>
+              </button>
             ))}
           </div>
         </div>
