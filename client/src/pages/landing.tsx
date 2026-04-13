@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plane, TrainFront, BarChart3, Image, ArrowRight, Globe, MapPin, Route, Sparkles, Plus } from "lucide-react";
+import { Plane, TrainFront, BarChart3, Image, Globe, MapPin, Route, Sparkles, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { StationAutocomplete } from "@/components/station-autocomplete";
+import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
 import type { TrainStation } from "@/lib/european-stations";
 import type { Trip } from "@shared/schema";
 
@@ -109,10 +110,9 @@ function WorldMapSVG() {
   );
 }
 
-const emptyFormData = {
-  type: "flight" as string,
-  airline: "",
-  flightNumber: "",
+/* ---------- Train form (kept simpler, unchanged) ---------- */
+const emptyTrainForm = {
+  type: "train" as const,
   trainOperator: "",
   trainNumber: "",
   trainClass: "",
@@ -132,10 +132,10 @@ const emptyFormData = {
   notes: "",
 };
 
-function AddTripDialog({ trigger, defaultType }: { trigger: React.ReactNode; defaultType?: string }) {
+function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ ...emptyFormData, type: defaultType || "flight" });
+  const [formData, setFormData] = useState({ ...emptyTrainForm });
 
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -146,8 +146,8 @@ function AddTripDialog({ trigger, defaultType }: { trigger: React.ReactNode; def
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
       setDialogOpen(false);
-      setFormData({ ...emptyFormData, type: defaultType || "flight" });
-      toast({ title: "Trip added", description: "Your trip has been recorded." });
+      setFormData({ ...emptyTrainForm });
+      toast({ title: "Train ride added", description: "Your trip has been recorded." });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -168,100 +168,60 @@ function AddTripDialog({ trigger, defaultType }: { trigger: React.ReactNode; def
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Trip</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <TrainFront className="w-5 h-5 text-amber-500" />
+            Add Train Ride
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Type */}
-          <div>
-            <Label>Trip Type</Label>
-            <Select value={formData.type} onValueChange={(v) => updateField("type", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flight">Flight</SelectItem>
-                <SelectItem value="train">Train</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Operator</Label>
+              <Input
+                placeholder="e.g. Eurostar"
+                value={formData.trainOperator || ""}
+                onChange={(e) => updateField("trainOperator", e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Train Number</Label>
+              <Input
+                placeholder="e.g. 9024"
+                value={formData.trainNumber || ""}
+                onChange={(e) => updateField("trainNumber", e.target.value)}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Class</Label>
+              <Select value={formData.trainClass || ""} onValueChange={(v) => updateField("trainClass", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="first">First Class</SelectItem>
+                  <SelectItem value="business">Business</SelectItem>
+                  <SelectItem value="second">Second Class</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-
-          {/* Flight-specific */}
-          {formData.type === "flight" && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Airline</Label>
-                <Input
-                  placeholder="e.g. United"
-                  value={formData.airline || ""}
-                  onChange={(e) => updateField("airline", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Flight Number</Label>
-                <Input
-                  placeholder="e.g. UA123"
-                  value={formData.flightNumber || ""}
-                  onChange={(e) => updateField("flightNumber", e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Train-specific */}
-          {formData.type === "train" && (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Operator</Label>
-                <Input
-                  placeholder="e.g. Eurostar"
-                  value={formData.trainOperator || ""}
-                  onChange={(e) => updateField("trainOperator", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Train Number</Label>
-                <Input
-                  placeholder="e.g. 9024"
-                  value={formData.trainNumber || ""}
-                  onChange={(e) => updateField("trainNumber", e.target.value)}
-                />
-              </div>
-              <div className="col-span-2">
-                <Label>Class</Label>
-                <Select value={formData.trainClass || ""} onValueChange={(v) => updateField("trainClass", v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="first">First Class</SelectItem>
-                    <SelectItem value="business">Business</SelectItem>
-                    <SelectItem value="second">Second Class</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
 
           {/* Departure */}
           <div className="space-y-2">
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Departure</Label>
             <div className="grid grid-cols-3 gap-2">
               <Input placeholder="City" value={formData.departureCity} onChange={(e) => updateField("departureCity", e.target.value)} required />
-              {formData.type === "train" ? (
-                <StationAutocomplete
-                  placeholder="Station"
-                  value={formData.departureCode}
-                  onChange={(v) => updateField("departureCode", v)}
-                  onStationSelect={(s: TrainStation) => {
-                    updateField("departureCode", s.code);
-                    if (!formData.departureCity) updateField("departureCity", s.city);
-                    if (!formData.departureCountry) updateField("departureCountry", s.country);
-                  }}
-                  required
-                />
-              ) : (
-                <Input placeholder="IATA (EWR)" value={formData.departureCode} onChange={(e) => updateField("departureCode", e.target.value.toUpperCase())} required />
-              )}
+              <StationAutocomplete
+                placeholder="Station"
+                value={formData.departureCode}
+                onChange={(v) => updateField("departureCode", v)}
+                onStationSelect={(s: TrainStation) => {
+                  updateField("departureCode", s.code);
+                  if (!formData.departureCity) updateField("departureCity", s.city);
+                  if (!formData.departureCountry) updateField("departureCountry", s.country);
+                }}
+                required
+              />
               <Input placeholder="Country" value={formData.departureCountry} onChange={(e) => updateField("departureCountry", e.target.value)} required />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -275,21 +235,17 @@ function AddTripDialog({ trigger, defaultType }: { trigger: React.ReactNode; def
             <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Arrival</Label>
             <div className="grid grid-cols-3 gap-2">
               <Input placeholder="City" value={formData.arrivalCity} onChange={(e) => updateField("arrivalCity", e.target.value)} required />
-              {formData.type === "train" ? (
-                <StationAutocomplete
-                  placeholder="Station"
-                  value={formData.arrivalCode}
-                  onChange={(v) => updateField("arrivalCode", v)}
-                  onStationSelect={(s: TrainStation) => {
-                    updateField("arrivalCode", s.code);
-                    if (!formData.arrivalCity) updateField("arrivalCity", s.city);
-                    if (!formData.arrivalCountry) updateField("arrivalCountry", s.country);
-                  }}
-                  required
-                />
-              ) : (
-                <Input placeholder="IATA (LHR)" value={formData.arrivalCode} onChange={(e) => updateField("arrivalCode", e.target.value.toUpperCase())} required />
-              )}
+              <StationAutocomplete
+                placeholder="Station"
+                value={formData.arrivalCode}
+                onChange={(v) => updateField("arrivalCode", v)}
+                onStationSelect={(s: TrainStation) => {
+                  updateField("arrivalCode", s.code);
+                  if (!formData.arrivalCity) updateField("arrivalCity", s.city);
+                  if (!formData.arrivalCountry) updateField("arrivalCountry", s.country);
+                }}
+                required
+              />
               <Input placeholder="Country" value={formData.arrivalCountry} onChange={(e) => updateField("arrivalCountry", e.target.value)} required />
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -310,31 +266,57 @@ function AddTripDialog({ trigger, defaultType }: { trigger: React.ReactNode; def
             </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <Label>Status</Label>
-            <Select value={formData.status} onValueChange={(v) => updateField("status", v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="upcoming">Upcoming</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Notes */}
           <div>
             <Label>Notes (optional)</Label>
             <Textarea placeholder="Any notes about this trip..." value={formData.notes || ""} onChange={(e) => updateField("notes", e.target.value)} />
           </div>
 
-          <Button type="submit" className="w-full rounded-xl" disabled={createMutation.isPending}>
-            {createMutation.isPending ? "Adding..." : "Add Trip"}
+          <Button type="submit" className="w-full rounded-xl" disabled={createMutation.isPending}
+            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
+            {createMutation.isPending ? "Adding..." : "Add Train Ride"}
           </Button>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Smart Flight Dialog ---------- */
+function AddFlightDialog({ trigger }: { trigger: React.ReactNode }) {
+  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const createMutation = useMutation({
+    mutationFn: async (data: FlightFormData) => {
+      const res = await apiRequest("POST", "/api/trips", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
+      setDialogOpen(false);
+      toast({ title: "Flight added", description: "Your flight has been recorded." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plane className="w-5 h-5 text-sky-500" />
+            Add Flight
+          </DialogTitle>
+        </DialogHeader>
+        <SmartFlightForm
+          onSubmit={(data) => createMutation.mutate(data)}
+          isPending={createMutation.isPending}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -399,8 +381,7 @@ export default function Landing() {
 
           {/* Primary action buttons — Add Flight / Add Train */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
-            <AddTripDialog
-              defaultType="flight"
+            <AddFlightDialog
               trigger={
                 <Button size="lg" className="gap-2 px-7 text-sm font-semibold shadow-lg w-full sm:w-auto" style={{ background: "linear-gradient(135deg, #0ea5e9, #3b82f6)", border: "none" }}>
                   <Plus className="w-4 h-4" />
@@ -409,8 +390,7 @@ export default function Landing() {
                 </Button>
               }
             />
-            <AddTripDialog
-              defaultType="train"
+            <AddTrainDialog
               trigger={
                 <Button size="lg" className="gap-2 px-7 text-sm font-semibold shadow-lg w-full sm:w-auto" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
                   <Plus className="w-4 h-4" />
