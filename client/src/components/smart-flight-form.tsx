@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { AIRLINE_CODES, searchAirlines, type AirlineMatch } from "@/lib/airline-codes";
 import { AIRPORTS, calculateDistanceMiles, estimateFlightDuration, type AirportInfo } from "@/lib/airport-data";
+import { lookupFlightRoute } from "@/lib/flight-lookup";
 
 interface SmartFlightFormProps {
   onSubmit: (data: FlightFormData) => void;
@@ -278,8 +279,11 @@ export function SmartFlightForm({ onSubmit, isPending }: SmartFlightFormProps) {
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupDone, setLookupDone] = useState(false);
 
   const flightNumRef = useRef<HTMLInputElement>(null);
+  const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Derived
   const depAirport = AIRPORTS[departureCode] || null;
@@ -310,10 +314,37 @@ export function SmartFlightForm({ onSubmit, isPending }: SmartFlightFormProps) {
     setAirlineName("");
   };
 
+  // Lookup flight route when flight number changes
+  const doFlightLookup = async (num: string) => {
+    if (!airlineCode || num.length < 1) return;
+    const fullNum = `${airlineCode}${num}`;
+    setLookupLoading(true);
+    setLookupDone(false);
+    try {
+      const route = await lookupFlightRoute(fullNum);
+      if (route) {
+        setDepartureCode(route.origin.iata);
+        setArrivalCode(route.destination.iata);
+        setLookupDone(true);
+      }
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
   const handleFlightNumChange = (raw: string) => {
     // Allow only digits
     const cleaned = raw.replace(/[^0-9]/g, "").slice(0, 5);
     setFlightNum(cleaned);
+    // Reset airports when flight number changes
+    setDepartureCode("");
+    setArrivalCode("");
+    setLookupDone(false);
+    // Debounce the API lookup — fire after 600ms of no typing
+    if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current);
+    if (cleaned.length >= 1) {
+      lookupTimerRef.current = setTimeout(() => doFlightLookup(cleaned), 600);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -391,40 +422,83 @@ export function SmartFlightForm({ onSubmit, isPending }: SmartFlightFormProps) {
         </div>
       )}
 
-      {/* 3. From / To airports (appears after flight number entered) */}
-      {showAirports && (
-        <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="grid grid-cols-2 gap-4">
-            <AirportCodeInput
-              label="From"
-              value={departureCode}
-              onChange={setDepartureCode}
-              airportInfo={depAirport}
-              placeholder="e.g. EWR"
-            />
-            <AirportCodeInput
-              label="To"
-              value={arrivalCode}
-              onChange={setArrivalCode}
-              airportInfo={arrAirport}
-              placeholder="e.g. LHR"
-            />
-          </div>
+      {/* 3. Loading indicator while looking up flight */}
+      {lookupLoading && showFlightNum && flightNum.length >= 1 && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground animate-in fade-in duration-200">
+          <Loader2 className="w-4 h-4 animate-spin text-sky-500" />
+          <span>Looking up flight {airlineCode}{flightNum}...</span>
+        </div>
+      )}
 
-          {/* Route summary auto-populates when both airports set */}
-          {distance && duration && depAirport && arrAirport && (
-            <div className="mt-3 rounded-xl bg-muted/50 border border-border/60 px-4 py-3 flex items-center justify-between animate-in fade-in duration-200">
-              <div className="text-sm font-medium">
-                {depAirport.city}
-                <span className="mx-2 text-muted-foreground">→</span>
-                {arrAirport.city}
+      {/* 3. From / To airports (appears after flight number entered) */}
+      {showAirports && !lookupLoading && (
+        <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Show auto-populated route or manual entry */}
+          {lookupDone && depAirport && arrAirport ? (
+            <div className="rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border-2 border-emerald-500/30 px-4 py-3 space-y-1 animate-in fade-in duration-200">
+              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Route found</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="font-mono">{distance.toLocaleString()} mi</span>
-                <span>·</span>
-                <span className="font-mono">{fmtDuration(duration)}</span>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">
+                  <span className="font-mono font-bold">{departureCode}</span>
+                  <span className="mx-1 text-muted-foreground">{depAirport.city}</span>
+                  <span className="mx-2 text-muted-foreground">→</span>
+                  <span className="font-mono font-bold">{arrivalCode}</span>
+                  <span className="mx-1 text-muted-foreground">{arrAirport.city}</span>
+                </div>
               </div>
+              {distance && duration && (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="font-mono">{distance.toLocaleString()} mi</span>
+                  <span>·</span>
+                  <span className="font-mono">{fmtDuration(duration)}</span>
+                </div>
+              )}
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground underline hover:text-foreground mt-1"
+                onClick={() => { setLookupDone(false); setDepartureCode(""); setArrivalCode(""); }}
+              >
+                Edit airports manually
+              </button>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <AirportCodeInput
+                  label="From"
+                  value={departureCode}
+                  onChange={setDepartureCode}
+                  airportInfo={depAirport}
+                  placeholder="e.g. EWR"
+                />
+                <AirportCodeInput
+                  label="To"
+                  value={arrivalCode}
+                  onChange={setArrivalCode}
+                  airportInfo={arrAirport}
+                  placeholder="e.g. LHR"
+                />
+              </div>
+
+              {/* Route summary auto-populates when both airports set */}
+              {distance && duration && depAirport && arrAirport && (
+                <div className="mt-3 rounded-xl bg-muted/50 border border-border/60 px-4 py-3 flex items-center justify-between animate-in fade-in duration-200">
+                  <div className="text-sm font-medium">
+                    {depAirport.city}
+                    <span className="mx-2 text-muted-foreground">→</span>
+                    {arrAirport.city}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="font-mono">{distance.toLocaleString()} mi</span>
+                    <span>·</span>
+                    <span className="font-mono">{fmtDuration(duration)}</span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
