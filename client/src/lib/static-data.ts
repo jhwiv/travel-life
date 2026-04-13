@@ -1,5 +1,5 @@
-// Static trip data embedded at build time — no backend needed
-import tripDataRaw from "./trip-data.json";
+// LocalStorage-backed trip store — data persists across sessions
+const STORAGE_KEY = "travel-life-trips";
 
 export interface Trip {
   id: number;
@@ -25,51 +25,70 @@ export interface Trip {
   notes: string | null;
 }
 
-// Convert snake_case JSON to camelCase for frontend compatibility
 function toCamelCase(trip: any): Trip & Record<string, any> {
   return {
     id: trip.id,
     type: trip.type,
     airline: trip.airline,
-    flightNumber: trip.flight_number,
-    trainOperator: trip.train_operator,
-    trainNumber: trip.train_number,
-    trainClass: trip.train_class,
-    departureCity: trip.departure_city,
-    departureCode: trip.departure_code,
-    departureCountry: trip.departure_country,
-    arrivalCity: trip.arrival_city,
-    arrivalCode: trip.arrival_code,
-    arrivalCountry: trip.arrival_country,
-    departureDate: trip.departure_date,
-    arrivalDate: trip.arrival_date,
-    departureTime: trip.departure_time,
-    arrivalTime: trip.arrival_time,
+    flightNumber: trip.flightNumber || trip.flight_number,
+    trainOperator: trip.trainOperator || trip.train_operator,
+    trainNumber: trip.trainNumber || trip.train_number,
+    trainClass: trip.trainClass || trip.train_class,
+    departureCity: trip.departureCity || trip.departure_city,
+    departureCode: trip.departureCode || trip.departure_code,
+    departureCountry: trip.departureCountry || trip.departure_country,
+    arrivalCity: trip.arrivalCity || trip.arrival_city,
+    arrivalCode: trip.arrivalCode || trip.arrival_code,
+    arrivalCountry: trip.arrivalCountry || trip.arrival_country,
+    departureDate: trip.departureDate || trip.departure_date,
+    arrivalDate: trip.arrivalDate || trip.arrival_date,
+    departureTime: trip.departureTime || trip.departure_time,
+    arrivalTime: trip.arrivalTime || trip.arrival_time,
     duration: trip.duration,
     distance: trip.distance,
     status: trip.status,
     notes: trip.notes,
     // Keep snake_case versions too for compat
-    flight_number: trip.flight_number,
-    train_operator: trip.train_operator,
-    train_number: trip.train_number,
-    train_class: trip.train_class,
-    departure_city: trip.departure_city,
-    departure_code: trip.departure_code,
-    departure_country: trip.departure_country,
-    arrival_city: trip.arrival_city,
-    arrival_code: trip.arrival_code,
-    arrival_country: trip.arrival_country,
-    departure_date: trip.departure_date,
-    arrival_date: trip.arrival_date,
-    departure_time: trip.departure_time,
-    arrival_time: trip.arrival_time,
+    flight_number: trip.flightNumber || trip.flight_number,
+    train_operator: trip.trainOperator || trip.train_operator,
+    train_number: trip.trainNumber || trip.train_number,
+    train_class: trip.trainClass || trip.train_class,
+    departure_city: trip.departureCity || trip.departure_city,
+    departure_code: trip.departureCode || trip.departure_code,
+    departure_country: trip.departureCountry || trip.departure_country,
+    arrival_city: trip.arrivalCity || trip.arrival_city,
+    arrival_code: trip.arrivalCode || trip.arrival_code,
+    arrival_country: trip.arrivalCountry || trip.arrival_country,
+    departure_date: trip.departureDate || trip.departure_date,
+    arrival_date: trip.arrivalDate || trip.arrival_date,
+    departure_time: trip.departureTime || trip.departure_time,
+    arrival_time: trip.arrivalTime || trip.arrival_time,
   };
 }
 
-// In-memory mutable trip store (supports add/delete in static mode)
-let _trips = (tripDataRaw as any[]).map(toCamelCase);
-let _nextId = Math.max(..._trips.map(t => t.id)) + 1;
+function loadFromStorage(): (Trip & Record<string, any>)[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(toCamelCase);
+  } catch {
+    return [];
+  }
+}
+
+function saveToStorage(trips: (Trip & Record<string, any>)[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+  } catch {
+    // Storage full or unavailable — fail silently
+  }
+}
+
+// In-memory store backed by localStorage
+let _trips = loadFromStorage();
+let _nextId = _trips.length > 0 ? Math.max(..._trips.map(t => t.id)) + 1 : 1;
 
 export function getTrips() {
   return [..._trips];
@@ -78,11 +97,13 @@ export function getTrips() {
 export function addTrip(data: any) {
   const newTrip = toCamelCase({ ...data, id: _nextId++ });
   _trips.push(newTrip);
+  saveToStorage(_trips);
   return newTrip;
 }
 
 export function deleteTrip(id: number) {
   _trips = _trips.filter(t => t.id !== id);
+  saveToStorage(_trips);
 }
 
 export function computeAnalytics() {
