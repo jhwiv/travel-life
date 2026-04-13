@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider, useTheme } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Trips from "@/pages/trips";
@@ -14,6 +15,8 @@ import {
   Image,
   Menu,
   X,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -65,6 +68,7 @@ const navItems = [
 function Sidebar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <>
@@ -127,9 +131,21 @@ function Sidebar() {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-sidebar-border">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+        {/* Footer with dark mode toggle */}
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            data-testid="button-theme-toggle"
+          >
+            {theme === "dark" ? (
+              <Sun className="w-4 h-4" />
+            ) : (
+              <Moon className="w-4 h-4" />
+            )}
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+          </button>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2 px-3">
             Travel Life v1.0
           </p>
         </div>
@@ -164,10 +180,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router hook={useHashLocation}>
-          <AppLayout />
-        </Router>
+        <ThemeProvider>
+          <Toaster />
+          <Router hook={useHashLocation}>
+            <AppLayout />
+          </Router>
+        </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

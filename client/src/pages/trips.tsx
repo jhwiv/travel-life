@@ -35,6 +35,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Plane, TrainFront, Plus, Trash2, Search, Filter } from "lucide-react";
 import type { Trip, InsertTrip } from "@shared/schema";
+import { StationAutocomplete } from "@/components/station-autocomplete";
+import type { TrainStation } from "@/lib/european-stations";
 
 const emptyFormData: Omit<InsertTrip, "id"> = {
   type: "flight",
@@ -133,7 +135,7 @@ export default function Trips() {
   };
 
   return (
-    <div className="p-6 space-y-4 overflow-y-auto">
+    <div className="p-6 pl-14 lg:pl-6 space-y-4 overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -255,17 +257,30 @@ export default function Trips() {
                     }
                     required
                   />
-                  <Input
-                    data-testid="input-departure-code"
-                    placeholder={
-                      formData.type === "flight" ? "IATA (EWR)" : "Station"
-                    }
-                    value={formData.departureCode}
-                    onChange={(e) =>
-                      updateField("departureCode", e.target.value.toUpperCase())
-                    }
-                    required
-                  />
+                  {formData.type === "train" ? (
+                    <StationAutocomplete
+                      data-testid="input-departure-code"
+                      placeholder="Station"
+                      value={formData.departureCode}
+                      onChange={(v) => updateField("departureCode", v)}
+                      onStationSelect={(s: TrainStation) => {
+                        updateField("departureCode", s.code);
+                        if (!formData.departureCity) updateField("departureCity", s.city);
+                        if (!formData.departureCountry) updateField("departureCountry", s.country);
+                      }}
+                      required
+                    />
+                  ) : (
+                    <Input
+                      data-testid="input-departure-code"
+                      placeholder="IATA (EWR)"
+                      value={formData.departureCode}
+                      onChange={(e) =>
+                        updateField("departureCode", e.target.value.toUpperCase())
+                      }
+                      required
+                    />
+                  )}
                   <Input
                     data-testid="input-departure-country"
                     placeholder="Country"
@@ -313,17 +328,30 @@ export default function Trips() {
                     }
                     required
                   />
-                  <Input
-                    data-testid="input-arrival-code"
-                    placeholder={
-                      formData.type === "flight" ? "IATA (LHR)" : "Station"
-                    }
-                    value={formData.arrivalCode}
-                    onChange={(e) =>
-                      updateField("arrivalCode", e.target.value.toUpperCase())
-                    }
-                    required
-                  />
+                  {formData.type === "train" ? (
+                    <StationAutocomplete
+                      data-testid="input-arrival-code"
+                      placeholder="Station"
+                      value={formData.arrivalCode}
+                      onChange={(v) => updateField("arrivalCode", v)}
+                      onStationSelect={(s: TrainStation) => {
+                        updateField("arrivalCode", s.code);
+                        if (!formData.arrivalCity) updateField("arrivalCity", s.city);
+                        if (!formData.arrivalCountry) updateField("arrivalCountry", s.country);
+                      }}
+                      required
+                    />
+                  ) : (
+                    <Input
+                      data-testid="input-arrival-code"
+                      placeholder="IATA (LHR)"
+                      value={formData.arrivalCode}
+                      onChange={(e) =>
+                        updateField("arrivalCode", e.target.value.toUpperCase())
+                      }
+                      required
+                    />
+                  )}
                   <Input
                     data-testid="input-arrival-country"
                     placeholder="Country"
@@ -482,8 +510,8 @@ export default function Trips() {
                     <div
                       className={`flex items-center justify-center w-9 h-9 rounded-lg ${
                         trip.type === "flight"
-                          ? "bg-blue-50 text-blue-600"
-                          : "bg-amber-50 text-amber-600"
+                          ? "bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400"
+                          : "bg-amber-50 dark:bg-amber-950 text-amber-600 dark:text-amber-400"
                       }`}
                     >
                       {trip.type === "flight" ? (

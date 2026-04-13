@@ -22,8 +22,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   CartesianGrid,
 } from "recharts";
 import type { Trip } from "@shared/schema";
@@ -178,7 +176,7 @@ export default function Dashboard() {
   const recentTrips = (trips || []).slice(0, 5);
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto">
+    <div className="p-6 pl-14 lg:pl-6 space-y-6 overflow-y-auto">
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
@@ -229,8 +227,9 @@ export default function Dashboard() {
         />
         <KPICard
           icon={Building2}
-          label="Airlines"
-          value={analytics.uniqueAirlines}
+          label="Operators"
+          value={analytics.uniqueAirlines + analytics.uniqueTrainOperators}
+          suffix={`${analytics.uniqueAirlines} air · ${analytics.uniqueTrainOperators} rail`}
           color="hsl(35, 80%, 55%)"
         />
       </div>
@@ -248,21 +247,25 @@ export default function Dashboard() {
             {yearData.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={yearData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 15%, 90%)" />
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                   <XAxis
                     dataKey="year"
                     tick={{ fontSize: 12 }}
-                    stroke="hsl(220, 8%, 46%)"
+                    className="fill-muted-foreground"
+                    stroke="currentColor"
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    stroke="hsl(220, 8%, 46%)"
+                    className="fill-muted-foreground"
+                    stroke="currentColor"
                     allowDecimals={false}
                   />
                   <Tooltip
                     contentStyle={{
                       borderRadius: "8px",
-                      border: "1px solid hsl(210, 15%, 90%)",
+                      border: "1px solid hsl(var(--border))",
+                      backgroundColor: "hsl(var(--card))",
+                      color: "hsl(var(--foreground))",
                       fontSize: 13,
                     }}
                   />
@@ -310,7 +313,9 @@ export default function Dashboard() {
                     <Tooltip
                       contentStyle={{
                         borderRadius: "8px",
-                        border: "1px solid hsl(210, 15%, 90%)",
+                        border: "1px solid hsl(var(--border))",
+                        backgroundColor: "hsl(var(--card))",
+                        color: "hsl(var(--foreground))",
                         fontSize: 13,
                       }}
                     />
@@ -351,34 +356,36 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={monthData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210, 15%, 90%)" />
+              <BarChart data={monthData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="month"
                   tick={{ fontSize: 12 }}
-                  stroke="hsl(220, 8%, 46%)"
+                  className="fill-muted-foreground"
+                  stroke="currentColor"
                 />
                 <YAxis
                   tick={{ fontSize: 12 }}
-                  stroke="hsl(220, 8%, 46%)"
+                  className="fill-muted-foreground"
+                  stroke="currentColor"
                   allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
                     borderRadius: "8px",
-                    border: "1px solid hsl(210, 15%, 90%)",
+                    border: "1px solid hsl(var(--border))",
+                    backgroundColor: "hsl(var(--card))",
+                    color: "hsl(var(--foreground))",
                     fontSize: 13,
                   }}
                 />
-                <Line
-                  type="monotone"
+                <Bar
                   dataKey="count"
                   name="Trips"
-                  stroke="hsl(200, 75%, 42%)"
-                  strokeWidth={2}
-                  dot={{ fill: "hsl(200, 75%, 42%)", r: 4 }}
+                  fill="hsl(35, 80%, 55%)"
+                  radius={[4, 4, 0, 0]}
                 />
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
