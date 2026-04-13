@@ -193,3 +193,135 @@ export function parseFlightNumber(flightNumber: string): { airlineCode: string; 
   }
   return null;
 }
+
+/** Common aliases / abbreviations people use for airlines */
+const AIRLINE_ALIASES: Record<string, string> = {
+  // Abbreviations / trade names → IATA code
+  "SAS": "SK",
+  "SCANDINAVIAN": "SK",
+  "KLM": "KL",
+  "TAP": "TP",
+  "LOT": "LO",
+  "ANA": "NH",
+  "JAL": "JL",
+  "SWISS": "LX",
+  "CATHAY": "CX",
+  "EMIRATES": "EK",
+  "QATAR": "QR",
+  "ETIHAD": "EY",
+  "TURKISH": "TK",
+  "QANTAS": "QF",
+  "JETBLUE": "B6",
+  "SOUTHWEST": "WN",
+  "DELTA": "DL",
+  "UNITED": "UA",
+  "AMERICAN": "AA",
+  "ALASKA": "AS",
+  "SPIRIT": "NK",
+  "FRONTIER": "F9",
+  "HAWAIIAN": "HA",
+  "RYANAIR": "FR",
+  "EASYJET": "U2",
+  "VUELING": "VY",
+  "WIZZ": "W6",
+  "WIZZAIR": "W6",
+  "NORWEGIAN": "DY",
+  "LATAM": "LA",
+  "AVIANCA": "AV",
+  "AEROMEXICO": "AM",
+  "WESTJET": "WS",
+  "PORTER": "PD",
+  "AIRASIA": "AK",
+  "SCOOT": "TR",
+  "INDIGO": "6E",
+  "ICELANDAIR": "FI",
+  "FINNAIR": "AY",
+  "IBERIA": "IB",
+  "LUFTHANSA": "LH",
+  "COPA": "CM",
+  "ETHIOPIAN": "ET",
+  "SAUDIA": "SV",
+  "KOREAN": "KE",
+  "EVA": "BR",
+  "SINGAPORE": "SQ",
+  "THAI": "TG",
+  "GARUDA": "GA",
+  "BREEZE": "MX",
+  "ALLEGIANT": "G4",
+  "EUROWINGS": "EW",
+  "PEGASUS": "PC",
+  "FLYDUBAI": "FZ",
+  "AEROLINEAS": "AR",
+};
+
+export interface AirlineMatch {
+  code: string;
+  name: string;
+}
+
+/**
+ * Search airlines by name, alias, or IATA code.
+ * Returns up to `limit` matches sorted by relevance.
+ */
+export function searchAirlines(query: string, limit = 8): AirlineMatch[] {
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+
+  const results: AirlineMatch[] = [];
+  const seen = new Set<string>();
+
+  // 1. Exact IATA code match
+  if (AIRLINE_CODES[q]) {
+    results.push({ code: q, name: AIRLINE_CODES[q] });
+    seen.add(q);
+  }
+
+  // 2. Exact alias match
+  const aliasCode = AIRLINE_ALIASES[q];
+  if (aliasCode && !seen.has(aliasCode)) {
+    results.push({ code: aliasCode, name: AIRLINE_CODES[aliasCode] });
+    seen.add(aliasCode);
+  }
+
+  // 3. Partial alias match
+  for (const [alias, code] of Object.entries(AIRLINE_ALIASES)) {
+    if (seen.has(code)) continue;
+    if (alias.startsWith(q) || q.startsWith(alias)) {
+      results.push({ code, name: AIRLINE_CODES[code] });
+      seen.add(code);
+    }
+    if (results.length >= limit) return results;
+  }
+
+  // 4. Name starts with query
+  for (const [code, name] of Object.entries(AIRLINE_CODES)) {
+    if (seen.has(code)) continue;
+    if (name.toUpperCase().startsWith(q)) {
+      results.push({ code, name });
+      seen.add(code);
+    }
+    if (results.length >= limit) return results;
+  }
+
+  // 5. Name contains query
+  for (const [code, name] of Object.entries(AIRLINE_CODES)) {
+    if (seen.has(code)) continue;
+    if (name.toUpperCase().includes(q)) {
+      results.push({ code, name });
+      seen.add(code);
+    }
+    if (results.length >= limit) return results;
+  }
+
+  // 6. IATA code starts with query
+  for (const [code, name] of Object.entries(AIRLINE_CODES)) {
+    if (seen.has(code)) continue;
+    if (code.startsWith(q)) {
+      results.push({ code, name });
+      seen.add(code);
+    }
+    if (results.length >= limit) return results;
+  }
+
+  return results;
+}
