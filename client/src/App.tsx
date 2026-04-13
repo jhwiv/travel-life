@@ -16,8 +16,7 @@ import {
   Image,
   Menu,
   X,
-  Sun,
-  Moon,
+  Home,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -69,23 +68,23 @@ const navItems = [
 function Sidebar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
 
   return (
     <>
       {/* Mobile toggle */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-3 left-3 z-50 lg:hidden bg-background/90 backdrop-blur border rounded-xl p-2 shadow-sm"
+        className="fixed top-3 left-3 z-50 lg:hidden rounded-xl p-2 shadow-sm"
+        style={{ background: "rgba(26,16,64,0.95)", border: "1px solid rgba(139,92,246,0.15)" }}
         data-testid="button-mobile-menu"
       >
-        {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {mobileOpen ? <X className="w-5 h-5 text-white/80" /> : <Menu className="w-5 h-5 text-white/80" />}
       </button>
 
       {/* Overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -93,17 +92,21 @@ function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-full w-[220px] bg-sidebar/95 backdrop-blur-md border-r border-sidebar-border flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
+          "fixed top-0 left-0 z-40 h-full w-[220px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
+        style={{
+          background: "linear-gradient(180deg, #12082e 0%, #0e0a20 50%, #0a0a1a 100%)",
+          borderRight: "1px solid rgba(139,92,246,0.1)",
+        }}
       >
         {/* Brand */}
         <Link href="/" onClick={() => setMobileOpen(false)}>
-          <div className="flex items-center gap-2.5 px-5 h-14 border-b border-sidebar-border cursor-pointer hover:bg-sidebar-accent/50 transition-colors">
-            <div className="text-primary">
+          <div className="flex items-center gap-2.5 px-5 h-14 cursor-pointer hover:bg-purple-500/5 transition-colors" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+            <div className="text-purple-400">
               <TravelLifeLogo />
             </div>
-            <span className="text-sm font-bold tracking-tight">Travel Life</span>
+            <span className="text-sm font-bold tracking-tight text-white">Travel Life</span>
           </div>
         </Link>
 
@@ -121,8 +124,8 @@ function Sidebar() {
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer",
                     isActive
-                      ? "bg-primary/10 text-primary shadow-sm"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/70"
+                      ? "bg-purple-500/15 text-purple-300"
+                      : "text-white/50 hover:bg-white/5 hover:text-white/70"
                   )}
                   data-testid={`nav-${item.label.toLowerCase()}`}
                 >
@@ -134,22 +137,16 @@ function Sidebar() {
           })}
         </nav>
 
-        {/* Footer with dark mode toggle */}
-        <div className="px-3 py-3 border-t border-sidebar-border">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-sidebar-foreground hover:bg-sidebar-accent/70 transition-colors"
-            data-testid="button-theme-toggle"
-          >
-            {theme === "dark" ? (
-              <Sun className="w-[18px] h-[18px]" />
-            ) : (
-              <Moon className="w-[18px] h-[18px]" />
-            )}
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
-          </button>
-          <p className="text-[9px] text-muted-foreground uppercase tracking-[0.15em] mt-2 px-3 opacity-60">
-            Travel Life v2.0
+        {/* Footer */}
+        <div className="px-3 py-3" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
+          <Link href="/" onClick={() => setMobileOpen(false)}>
+            <div className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/40 hover:bg-white/5 hover:text-white/60 transition-colors cursor-pointer">
+              <Home className="w-[18px] h-[18px]" />
+              Home
+            </div>
+          </Link>
+          <p className="text-[9px] text-white/15 uppercase tracking-[0.15em] mt-2 px-3">
+            Travel Life v3.0
           </p>
         </div>
       </aside>
@@ -160,7 +157,7 @@ function Sidebar() {
 /** Pages that use sidebar layout */
 function WithSidebar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden" style={{ background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 30%, #0f1628 60%, #0a0a1a 100%)" }}>
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         {children}

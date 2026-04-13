@@ -802,7 +802,7 @@ export default function Infographics() {
   return (
     <div className="min-h-screen pb-12">
       {/* Gradient header */}
-      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-8" style={{ background: "linear-gradient(135deg, hsl(280, 50%, 30%) 0%, hsl(260, 55%, 35%) 30%, hsl(240, 50%, 35%) 60%, hsl(220, 55%, 30%) 100%)" }}>
+      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-8" style={{ background: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #1a2744 100%)" }}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full" style={{ background: "radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)" }} />
           <svg className="absolute inset-0 w-full h-full opacity-[0.05]" aria-hidden>
