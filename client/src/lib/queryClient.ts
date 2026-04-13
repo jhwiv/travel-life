@@ -1,7 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { getTrips, computeAnalytics, addTrip, deleteTrip } from "./static-data";
 
-const API_BASE = "__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__";
-
+// Static mode: all data is embedded, no backend needed
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -14,14 +14,24 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(`${API_BASE}${url}`, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-  });
-
-  await throwIfResNotOk(res);
-  return res;
+  // Handle mutations in static mode
+  if (method === "POST" && url === "/api/trips") {
+    const newTrip = addTrip(data);
+    return new Response(JSON.stringify(newTrip), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  if (method === "DELETE" && url.startsWith("/api/trips/")) {
+    const id = parseInt(url.split("/").pop()!);
+    deleteTrip(id);
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  // Fallback for any other requests
+  return new Response(JSON.stringify({}), { status: 200 });
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -30,14 +40,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(`${API_BASE}${queryKey.join("/")}`);
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    const key = queryKey.join("/");
+    
+    // Serve data from embedded static store
+    if (key === "/api/trips") {
+      return getTrips() as unknown as T;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
+    if (key === "/api/analytics") {
+      return computeAnalytics() as unknown as T;
+    }
+    
+    return null as unknown as T;
   };
 
 export const queryClient = new QueryClient({
