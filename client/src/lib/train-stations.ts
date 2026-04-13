@@ -6,7 +6,7 @@ export interface TrainStation {
 }
 
 /** Curated list of major train stations worldwide (200+) */
-export const EUROPEAN_STATIONS: TrainStation[] = [
+export const TRAIN_STATIONS: TrainStation[] = [
   // France
   { code: "PLY", name: "Paris Gare de Lyon", city: "Paris", country: "France" },
   { code: "PNO", name: "Paris Gare du Nord", city: "Paris", country: "France" },
@@ -235,7 +235,7 @@ export const EUROPEAN_STATIONS: TrainStation[] = [
 export function searchStations(query: string, limit = 8): TrainStation[] {
   if (!query || query.length < 1) return [];
   const q = query.toLowerCase();
-  return EUROPEAN_STATIONS
+  return TRAIN_STATIONS
     .filter(
       (s) =>
         s.code.toLowerCase().includes(q) ||

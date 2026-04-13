@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { searchStations, type TrainStation } from "@/lib/european-stations";
+import { searchStations, type TrainStation } from "@/lib/train-stations";
 import { cn } from "@/lib/utils";
 
 interface StationAutocompleteProps {

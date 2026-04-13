@@ -8,7 +8,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { TRAIN_OPERATORS, searchTrainOperators, type TrainOperatorMatch } from "@/lib/train-operators";
-import { EUROPEAN_STATIONS, searchStations, type TrainStation } from "@/lib/european-stations";
+import { TRAIN_STATIONS, searchStations, type TrainStation } from "@/lib/train-stations";
 
 interface SmartTrainFormProps {
   onSubmit: (data: TrainFormData) => void;

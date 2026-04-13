@@ -4,9 +4,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Plane, TrainFront, BarChart3, Image, Globe, MapPin, Route, Sparkles, Plus, ArrowRight, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,17 +11,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { StationAutocomplete } from "@/components/station-autocomplete";
 import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
-import type { TrainStation } from "@/lib/european-stations";
+import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
 import type { Trip } from "@shared/schema";
 
 interface Analytics {
@@ -101,35 +90,13 @@ function WorldMapSVG() {
   );
 }
 
-/* ---------- Train form ---------- */
-const emptyTrainForm = {
-  type: "train" as const,
-  trainOperator: "",
-  trainNumber: "",
-  trainClass: "",
-  departureCity: "",
-  departureCode: "",
-  departureCountry: "",
-  arrivalCity: "",
-  arrivalCode: "",
-  arrivalCountry: "",
-  departureDate: "",
-  arrivalDate: "",
-  departureTime: "",
-  arrivalTime: "",
-  duration: 0,
-  distance: 0,
-  status: "completed",
-  notes: "",
-};
-
+/* ---------- Smart Train Dialog ---------- */
 function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({ ...emptyTrainForm });
 
   const createMutation = useMutation({
-    mutationFn: async (data: typeof formData) => {
+    mutationFn: async (data: TrainFormData) => {
       const res = await apiRequest("POST", "/api/trips", data);
       return res.json();
     },
@@ -137,22 +104,12 @@ function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
       setDialogOpen(false);
-      setFormData({ ...emptyTrainForm });
       toast({ title: "Train ride added", description: "Your trip has been recorded." });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-
-  const updateField = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate(formData);
-  };
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -164,71 +121,10 @@ function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
             Add Train Ride
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Operator</Label>
-              <Input placeholder="e.g. Eurostar" value={formData.trainOperator || ""} onChange={(e) => updateField("trainOperator", e.target.value)} />
-            </div>
-            <div>
-              <Label>Train Number</Label>
-              <Input placeholder="e.g. 9024" value={formData.trainNumber || ""} onChange={(e) => updateField("trainNumber", e.target.value)} />
-            </div>
-            <div className="col-span-2">
-              <Label>Class</Label>
-              <Select value={formData.trainClass || ""} onValueChange={(v) => updateField("trainClass", v)}>
-                <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="first">First Class</SelectItem>
-                  <SelectItem value="business">Business</SelectItem>
-                  <SelectItem value="second">Second Class</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Departure</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Input placeholder="City" value={formData.departureCity} onChange={(e) => updateField("departureCity", e.target.value)} required />
-              <StationAutocomplete placeholder="Station" value={formData.departureCode} onChange={(v) => updateField("departureCode", v)} onStationSelect={(s: TrainStation) => { updateField("departureCode", s.code); if (!formData.departureCity) updateField("departureCity", s.city); if (!formData.departureCountry) updateField("departureCountry", s.country); }} required />
-              <Input placeholder="Country" value={formData.departureCountry} onChange={(e) => updateField("departureCountry", e.target.value)} required />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={formData.departureDate} onChange={(e) => updateField("departureDate", e.target.value)} required />
-              <Input type="time" value={formData.departureTime} onChange={(e) => updateField("departureTime", e.target.value)} required />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[10px] text-muted-foreground uppercase tracking-wider">Arrival</Label>
-            <div className="grid grid-cols-3 gap-2">
-              <Input placeholder="City" value={formData.arrivalCity} onChange={(e) => updateField("arrivalCity", e.target.value)} required />
-              <StationAutocomplete placeholder="Station" value={formData.arrivalCode} onChange={(v) => updateField("arrivalCode", v)} onStationSelect={(s: TrainStation) => { updateField("arrivalCode", s.code); if (!formData.arrivalCity) updateField("arrivalCity", s.city); if (!formData.arrivalCountry) updateField("arrivalCountry", s.country); }} required />
-              <Input placeholder="Country" value={formData.arrivalCountry} onChange={(e) => updateField("arrivalCountry", e.target.value)} required />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={formData.arrivalDate} onChange={(e) => updateField("arrivalDate", e.target.value)} required />
-              <Input type="time" value={formData.arrivalTime} onChange={(e) => updateField("arrivalTime", e.target.value)} required />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Duration (minutes)</Label>
-              <Input type="number" min="1" value={formData.duration || ""} onChange={(e) => updateField("duration", parseInt(e.target.value) || 0)} required />
-            </div>
-            <div>
-              <Label>Distance (miles)</Label>
-              <Input type="number" min="0" step="0.1" value={formData.distance || ""} onChange={(e) => updateField("distance", parseFloat(e.target.value) || 0)} />
-            </div>
-          </div>
-          <div>
-            <Label>Notes (optional)</Label>
-            <Textarea placeholder="Any notes about this trip..." value={formData.notes || ""} onChange={(e) => updateField("notes", e.target.value)} />
-          </div>
-          <Button type="submit" className="w-full rounded-xl" disabled={createMutation.isPending}
-            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
-            {createMutation.isPending ? "Adding..." : "Add Train Ride"}
-          </Button>
-        </form>
+        <SmartTrainForm
+          onSubmit={(data) => createMutation.mutate(data)}
+          isPending={createMutation.isPending}
+        />
       </DialogContent>
     </Dialog>
   );
