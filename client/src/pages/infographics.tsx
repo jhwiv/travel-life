@@ -174,89 +174,164 @@ function computeStats(trips: Trip[], year: string) {
 type InfographicType = "travel-passport" | "journey-stats" | "distance-breakdown" | "year-in-review" | "top-routes";
 
 /* ─────────────────────────────────────────────────────────────────────
-   1. TRAVEL PASSPORT — premium dark gradient with gold accents
+   1. TRAVEL PASSPORT — Flighty-style premium dark passport
    ───────────────────────────────────────────────────────────────────── */
+function PassportWorldMap({ trips }: { trips: Trip[] }) {
+  return (
+    <div className="relative w-full overflow-hidden" style={{ background: "linear-gradient(180deg, #1a1040 0%, #1e1450 100%)" }}>
+      <svg viewBox="0 0 800 340" className="w-full" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="pp-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(139,92,246,0.08)" strokeWidth="0.5" />
+          </pattern>
+          <linearGradient id="pp-arc" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.3" />
+          </linearGradient>
+        </defs>
+        <rect width="800" height="340" fill="url(#pp-grid)" />
+        <g fill="none" stroke="rgba(139,92,246,0.15)" strokeWidth="1" strokeLinecap="round">
+          <path d="M100,65 Q125,55 155,58 Q175,50 200,55 L225,65 Q245,58 260,70 L275,88 Q265,110 255,130 L240,150 Q225,162 200,165 L175,155 Q155,145 145,130 L130,108 Q118,88 100,65Z" />
+          <path d="M200,190 Q215,178 228,185 L240,200 Q248,225 242,248 L236,270 Q228,282 218,288 L205,278 Q195,258 200,238Z" />
+          <path d="M375,55 Q388,48 405,52 L422,60 Q435,66 440,78 L434,95 Q428,108 415,112 L398,108 Q385,102 378,90 L375,72Z" />
+          <path d="M385,132 Q398,125 410,130 L428,145 Q435,168 432,192 L422,215 Q410,232 398,238 L385,226 Q374,205 377,180Z" />
+          <path d="M450,48 Q485,38 520,42 L565,55 Q600,62 622,75 L632,92 Q626,108 608,118 L585,124 Q548,130 515,122 L480,112 Q458,100 450,80Z" />
+          <path d="M600,215 Q622,208 645,215 L662,228 Q668,240 662,252 L645,258 Q620,262 604,252 L596,240 Q592,228 600,215Z" />
+        </g>
+        <g fill="none" strokeWidth="1.2">
+          <path d="M185,88 Q290,20 405,62" stroke="url(#pp-arc)" strokeDasharray="5,4" />
+          <path d="M185,88 Q350,50 520,55" stroke="url(#pp-arc)" strokeDasharray="5,4" />
+          <path d="M185,88 Q290,160 398,145" stroke="rgba(139,92,246,0.2)" strokeDasharray="5,4" />
+          <path d="M185,88 Q150,140 215,195" stroke="rgba(6,182,212,0.2)" strokeDasharray="5,4" />
+        </g>
+        {[
+          { x: 185, y: 88, r: 5, color: "#8b5cf6", label: "EWR" },
+          { x: 405, y: 62, r: 3.5, color: "#6366f1" },
+          { x: 520, y: 55, r: 3, color: "#06b6d4" },
+          { x: 398, y: 145, r: 3, color: "#a78bfa" },
+          { x: 215, y: 195, r: 3, color: "#22d3ee" },
+          { x: 630, y: 232, r: 2.5, color: "#f472b6" },
+          { x: 155, y: 115, r: 3, color: "#34d399" },
+        ].map((dot, i) => (
+          <g key={i}>
+            <circle cx={dot.x} cy={dot.y} r={dot.r * 2.5} fill={dot.color} fillOpacity="0.1">
+              <animate attributeName="r" values={`${dot.r * 2.5};${dot.r * 3.5};${dot.r * 2.5}`} dur={`${3 + i * 0.4}s`} repeatCount="indefinite" />
+            </circle>
+            <circle cx={dot.x} cy={dot.y} r={dot.r} fill={dot.color} fillOpacity="0.8" />
+          </g>
+        ))}
+        <text x="185" y="78" fill="rgba(139,92,246,0.6)" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">EWR</text>
+      </svg>
+      <div className="absolute top-3 left-4 flex items-center gap-1.5 text-[10px] font-mono text-purple-300/50 tracking-wider">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-400/60" />
+        FLIGHT MAP
+      </div>
+    </div>
+  );
+}
+
 function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
   const s = computeStats(trips, year);
+  const dur = formatDuration(s.totalDuration);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "2-digit" }).toUpperCase().replace(/[\s,]+/g, "");
+  const mrzPad = (str: string, len: number) => (str + "<".repeat(len)).substring(0, len);
 
   return (
     <div
-      className="relative rounded-3xl overflow-hidden text-white min-h-[560px] flex flex-col justify-between"
+      className="relative overflow-hidden text-white flex flex-col"
       style={{
-        background: "linear-gradient(145deg, #0f1628 0%, #1a1040 25%, #2d1b69 50%, #1a2744 75%, #0d1117 100%)",
+        background: "linear-gradient(180deg, #1a1040 0%, #1e1450 30%, #2d1b69 60%, #1e1450 100%)",
       }}
     >
-      <DotPattern opacity={0.06} />
-      <DecoRing className="w-40 h-40 -top-10 -right-10 opacity-60" />
-      <DecoRing className="w-64 h-64 -bottom-20 -left-16 opacity-30" />
+      {/* World Map Section */}
+      <PassportWorldMap trips={s.filtered} />
 
-      {/* Gold accent line at top */}
-      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #d4a853 30%, #f0d78c 50%, #d4a853 70%, transparent)" }} />
+      {/* Country Flags Row */}
+      {s.countries.length > 0 && (
+        <div className="flex items-center justify-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid rgba(139,92,246,0.12)" }}>
+          {s.countries.map((c) => (
+            <div key={c} className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10">
+              <span className="text-lg leading-none">{getFlag(c)}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div className="relative z-10 p-7">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8">
+      {/* Title Section */}
+      <div className="px-6 pt-6 pb-4">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-1">Travel Life</p>
-            <h2 className="text-2xl font-extrabold tracking-tight leading-none" style={{ color: "#f0d78c" }}>
+            <h2 className="text-xl font-extrabold tracking-tight text-white leading-none">
               MY TRAVEL PASSPORT
             </h2>
-            <p className="text-[10px] tracking-[0.2em] opacity-40 mt-2 uppercase">
-              Passport · Pass · Pasaporte · Reisepass
+            <p className="text-[10px] tracking-[0.2em] text-white/35 mt-1.5 uppercase">
+              Passport · Pass · Pasaporte
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(212,168,83,0.2), rgba(240,215,140,0.1))", border: "1px solid rgba(212,168,83,0.25)" }}>
-            <Globe className="w-6 h-6" style={{ color: "#d4a853" }} />
+          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-purple-500/15 border border-purple-400/20">
+            <Globe className="w-5 h-5 text-purple-300" />
           </div>
         </div>
-
-        {/* Flags row */}
-        {s.countries.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            {s.countries.map((c) => (
-              <span key={c} className="text-2xl drop-shadow-md" title={c}>{getFlag(c)}</span>
-            ))}
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="h-px mb-6" style={{ background: "linear-gradient(90deg, transparent, rgba(212,168,83,0.3), transparent)" }} />
-
-        {/* Primary stats */}
-        <div className="grid grid-cols-2 gap-y-6 gap-x-8 mb-6">
-          <StatPill value={s.flights.length} label="Flights" large />
-          <StatPill value={s.trains.length} label="Train rides" large />
-          <div>
-            <p className="text-3xl font-bold tabular-nums leading-none">
-              {Math.round(s.totalDistance).toLocaleString()}
-              <span className="text-sm font-normal opacity-50 ml-1">mi</span>
-            </p>
-            <p className="text-[9px] uppercase tracking-[0.15em] opacity-50 mt-1.5">Total distance</p>
-          </div>
-          <StatPill value={formatDuration(s.totalDuration)} label="Travel time" />
-        </div>
-
-        {/* Secondary stats in glass panel */}
-        <GlassPanel className="px-5 py-4">
-          <div className="grid grid-cols-3 gap-4">
-            <StatPill value={s.stations.size} label="Stations" />
-            <StatPill value={s.airlines.length + s.trainOps.length} label="Operators" />
-            <StatPill value={s.countries.length} label="Countries" />
-          </div>
-        </GlassPanel>
       </div>
 
-      {/* Footer */}
-      <div className="relative z-10 px-7 pb-5">
-        <div className="h-px mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)" }} />
-        <div className="flex items-center justify-between">
-          <p className="text-[8px] font-mono tracking-[0.25em] opacity-30 uppercase">
-            {year === "all" ? "ALL TIME" : year} · TRAVEL LIFE
-          </p>
-          <p className="text-[8px] font-mono tracking-[0.2em] opacity-30">
-            {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-          </p>
+      {/* Stats — 2-col row */}
+      <div className="px-6 pb-4">
+        <div className="grid grid-cols-2 gap-6 mb-5">
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Flights</p>
+            <p className="text-5xl font-extrabold text-white tabular-nums leading-none">{s.flights.length}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Flight Distance</p>
+            <p className="text-4xl font-extrabold text-white tabular-nums leading-none">
+              {Math.round(s.flightDistance).toLocaleString()}
+              <span className="text-lg font-semibold text-purple-300/60 ml-1">mi</span>
+            </p>
+          </div>
         </div>
+
+        {/* Stats — 2-col row */}
+        <div className="grid grid-cols-2 gap-6 mb-5">
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Train Rides</p>
+            <p className="text-5xl font-extrabold text-white tabular-nums leading-none">{s.trains.length}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Total Distance</p>
+            <p className="text-4xl font-extrabold text-white tabular-nums leading-none">
+              {Math.round(s.totalDistance).toLocaleString()}
+              <span className="text-lg font-semibold text-purple-300/60 ml-1">mi</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Stats — 3-col row */}
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Travel Time</p>
+            <p className="text-2xl font-extrabold text-white tabular-nums leading-none">
+              {dur}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Airports</p>
+            <p className="text-2xl font-extrabold text-white tabular-nums leading-none">{s.stations.size}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Countries</p>
+            <p className="text-2xl font-extrabold text-white tabular-nums leading-none">{s.countries.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* MRZ Footer */}
+      <div className="mt-auto px-6 pt-4 pb-5" style={{ borderTop: "1px solid rgba(139,92,246,0.12)" }}>
+        <div className="font-mono text-[9px] text-white/25 leading-relaxed tracking-[0.15em] overflow-hidden">
+          <p>{mrzPad(`ALLTIME<<<MEMBER${dateStr}<<TRAVELLIFE`, 44)}</p>
+          <p>{mrzPad(`ISSUED${dateStr}EWR<<<TRAVELLIFE<<<GRANDLOOPSTUDIO.COM`, 44)}</p>
+        </div>
+        <div className="mt-3 h-[2px] rounded-full" style={{ background: "linear-gradient(90deg, #8b5cf6, #6366f1, #8b5cf6)" }} />
       </div>
     </div>
   );
@@ -881,7 +956,7 @@ export default function Infographics() {
 
       {/* Infographic Preview */}
       <div className="flex justify-center px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 -mt-4">
-        <div ref={infographicRef} className="w-full max-w-md">
+        <div ref={infographicRef} className="w-full max-w-lg">
           {selectedType === "travel-passport" && (
             <TravelPassport trips={trips} year={selectedYear} />
           )}

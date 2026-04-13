@@ -2,8 +2,26 @@ import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  displayName: text("display_name").notNull(),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true }).extend({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  displayName: z.string().min(1, "Display name is required"),
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
 export const trips = sqliteTable("trips", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id"),
   type: text("type").notNull(), // "flight" or "train"
   // Flight fields
   airline: text("airline"),
@@ -31,6 +49,7 @@ export const trips = sqliteTable("trips", {
 
 export const insertTripSchema = createInsertSchema(trips).omit({ id: true }).extend({
   type: z.enum(["flight", "train"]),
+  userId: z.number().nullable().optional(),
   departureCity: z.string().min(1, "Departure city is required"),
   departureCode: z.string().min(1, "Departure code is required"),
   departureCountry: z.string().min(1, "Departure country is required"),
