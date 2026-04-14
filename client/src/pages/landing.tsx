@@ -185,7 +185,7 @@ export default function Landing() {
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-4 font-display" style={{ background: "linear-gradient(135deg, #ffffff 0%, #99F6E4 40%, #14B8A6 60%, #0D9488 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
             Travel Life
           </h1>
-          <p className="text-sm sm:text-base md:text-lg text-teal-200/35 max-w-xs sm:max-w-md mx-auto mb-8 leading-relaxed px-2">
+          <p className="text-sm sm:text-base md:text-lg max-w-xs sm:max-w-md mx-auto mb-8 leading-relaxed px-2" style={{ color: "rgba(255,255,255,0.7)" }}>
             Track every flight and train ride. Visualize your journeys.
           </p>
 
@@ -198,10 +198,10 @@ export default function Landing() {
                 { value: analytics.uniqueCountries, label: "Countries" },
               ].map(({ value, label, isDecimal }) => (
                 <div key={label} className="text-center">
-                  <p className="text-3xl sm:text-4xl font-extrabold text-white tabular-nums font-display animate-count-up">
+                  <p className="text-3xl sm:text-4xl font-extrabold tabular-nums font-display animate-count-up" style={{ color: "#ffffff" }}>
                     {isDecimal ? `${value}` : <AnimatedStat value={value} />}
                   </p>
-                  <p className="text-[10px] text-teal-300/40 uppercase tracking-wider font-medium mt-1">{label}</p>
+                  <p className="text-[10px] uppercase tracking-wider font-medium mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>{label}</p>
                 </div>
               ))}
             </div>
