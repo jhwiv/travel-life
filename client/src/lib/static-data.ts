@@ -1,7 +1,7 @@
-// LocalStorage-backed trip store — data persists across sessions
-import seedTrips from "./trip-data.json";
+// Trip store — base flights are hardcoded, user-added trips persist in localStorage
+import baseTripsJson from "./trip-data.json";
 
-const STORAGE_KEY = "travel-life-trips";
+const USER_TRIPS_KEY = "travel-life-user-trips";
 
 export interface Trip {
   id: number;
@@ -68,15 +68,14 @@ function toCamelCase(trip: any): Trip & Record<string, any> {
   };
 }
 
-function loadFromStorage(): (Trip & Record<string, any>)[] {
+// The 15 real flights — always present, never deletable
+const BASE_TRIPS: (Trip & Record<string, any>)[] = (baseTripsJson as any[]).map(toCamelCase);
+const BASE_TRIP_IDS = new Set(BASE_TRIPS.map(t => t.id));
+
+function loadUserTrips(): (Trip & Record<string, any>)[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      // Seed with pre-populated flight data on first visit
-      const seeded = (seedTrips as any[]).map(toCamelCase);
-      saveToStorage(seeded);
-      return seeded;
-    }
+    const raw = localStorage.getItem(USER_TRIPS_KEY);
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.map(toCamelCase);
@@ -85,32 +84,41 @@ function loadFromStorage(): (Trip & Record<string, any>)[] {
   }
 }
 
-function saveToStorage(trips: (Trip & Record<string, any>)[]) {
+function saveUserTrips(trips: (Trip & Record<string, any>)[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+    localStorage.setItem(USER_TRIPS_KEY, JSON.stringify(trips));
   } catch {
     // Storage full or unavailable — fail silently
   }
 }
 
-// In-memory store backed by localStorage
-let _trips = loadFromStorage();
-let _nextId = _trips.length > 0 ? Math.max(..._trips.map(t => t.id)) + 1 : 1;
+// User-added trips stored in localStorage
+let _userTrips = loadUserTrips();
+let _nextId = Math.max(
+  BASE_TRIPS.length > 0 ? Math.max(...BASE_TRIPS.map(t => t.id)) : 0,
+  _userTrips.length > 0 ? Math.max(..._userTrips.map(t => t.id)) : 0,
+) + 1;
 
 export function getTrips() {
-  return [..._trips];
+  return [...BASE_TRIPS, ..._userTrips];
 }
 
 export function addTrip(data: any) {
   const newTrip = toCamelCase({ ...data, id: _nextId++ });
-  _trips.push(newTrip);
-  saveToStorage(_trips);
+  _userTrips.push(newTrip);
+  saveUserTrips(_userTrips);
   return newTrip;
 }
 
 export function deleteTrip(id: number) {
-  _trips = _trips.filter(t => t.id !== id);
-  saveToStorage(_trips);
+  // Base trips are permanent — only user-added trips can be deleted
+  if (BASE_TRIP_IDS.has(id)) return;
+  _userTrips = _userTrips.filter(t => t.id !== id);
+  saveUserTrips(_userTrips);
+}
+
+export function isBaseTripId(id: number): boolean {
+  return BASE_TRIP_IDS.has(id);
 }
 
 export function computeAnalytics() {

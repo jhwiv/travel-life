@@ -61,6 +61,7 @@ function TravelLifeLogo({ className = "w-7 h-7" }: { className?: string }) {
 }
 
 const navItems = [
+  { path: "/", label: "Home", icon: Home },
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/trips", label: "Trips", icon: RouteIcon },
   { path: "/infographics", label: "Infographics", icon: Image },
@@ -140,13 +141,7 @@ function Sidebar() {
 
         {/* Footer */}
         <div className="px-3 py-3" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
-          <Link href="/" onClick={() => setMobileOpen(false)}>
-            <div className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/40 hover:bg-white/5 hover:text-white/60 transition-colors cursor-pointer">
-              <Home className="w-[18px] h-[18px]" />
-              Home
-            </div>
-          </Link>
-          <p className="text-[9px] text-white/15 uppercase tracking-[0.15em] mt-2 px-3">
+          <p className="text-[9px] text-white/15 uppercase tracking-[0.15em] px-3">
             Travel Life v3.0
           </p>
         </div>

@@ -32,7 +32,7 @@ import { Plane, TrainFront, Plus, Trash2, Search, Filter, MapPin } from "lucide-
 import type { Trip } from "@shared/schema";
 import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
-import { getTrips, addTrip, deleteTrip as removeTrip } from "@/lib/static-data";
+import { getTrips, addTrip, deleteTrip as removeTrip, isBaseTripId } from "@/lib/static-data";
 
 
 function formatDuration(minutes: number) {
@@ -275,6 +275,7 @@ export default function Trips() {
                         · {formatDuration(trip.duration)}
                       </p>
                     </div>
+                    {!isBaseTripId(trip.id) && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -305,6 +306,7 @@ export default function Trips() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                    )}
                   </div>
                 </div>
               </div>
