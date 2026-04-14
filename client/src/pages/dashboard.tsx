@@ -13,6 +13,7 @@ import {
 import type { Trip } from "@shared/schema";
 import { Link } from "wouter";
 import { getTrips, computeAnalytics } from "@/lib/static-data";
+import FlightMap from "@/components/flight-map";
 
 interface Analytics {
   totalTrips: number;
@@ -66,66 +67,7 @@ function formatDistance(miles: number) {
   return miles.toLocaleString();
 }
 
-/* ─── World Map SVG ─── */
-function WorldMapHero({ trips }: { trips: Trip[] }) {
-  return (
-    <div className="relative w-full h-48 md:h-56 overflow-hidden rounded-2xl mb-4" style={{ background: "linear-gradient(180deg, #0F172A 0%, #0D2137 100%)" }}>
-      <svg viewBox="0 0 800 340" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <pattern id="map-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(13,148,136,0.08)" strokeWidth="0.5" />
-          </pattern>
-          <linearGradient id="arc-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#0D9488" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#1E3A5F" stopOpacity="0.3" />
-          </linearGradient>
-        </defs>
-        <rect width="800" height="340" fill="url(#map-grid)" />
-
-        <g fill="none" stroke="rgba(13,148,136,0.15)" strokeWidth="1" strokeLinecap="round">
-          <path d="M100,65 Q125,55 155,58 Q175,50 200,55 L225,65 Q245,58 260,70 L275,88 Q265,110 255,130 L240,150 Q225,162 200,165 L175,155 Q155,145 145,130 L130,108 Q118,88 100,65Z" />
-          <path d="M200,190 Q215,178 228,185 L240,200 Q248,225 242,248 L236,270 Q228,282 218,288 L205,278 Q195,258 200,238Z" />
-          <path d="M375,55 Q388,48 405,52 L422,60 Q435,66 440,78 L434,95 Q428,108 415,112 L398,108 Q385,102 378,90 L375,72Z" />
-          <path d="M385,132 Q398,125 410,130 L428,145 Q435,168 432,192 L422,215 Q410,232 398,238 L385,226 Q374,205 377,180Z" />
-          <path d="M450,48 Q485,38 520,42 L565,55 Q600,62 622,75 L632,92 Q626,108 608,118 L585,124 Q548,130 515,122 L480,112 Q458,100 450,80Z" />
-          <path d="M600,215 Q622,208 645,215 L662,228 Q668,240 662,252 L645,258 Q620,262 604,252 L596,240 Q592,228 600,215Z" />
-        </g>
-
-        <g fill="none" strokeWidth="1.2">
-          <path d="M185,88 Q290,20 405,62" stroke="url(#arc-grad)" className="animate-arc" style={{ animationDelay: "0.2s" }} />
-          <path d="M185,88 Q350,50 520,55" stroke="url(#arc-grad)" className="animate-arc" style={{ animationDelay: "0.5s" }} />
-          <path d="M185,88 Q290,160 398,145" stroke="rgba(13,148,136,0.2)" className="animate-arc" style={{ animationDelay: "0.8s" }} />
-          <path d="M185,88 Q150,140 215,195" stroke="rgba(245,158,11,0.2)" className="animate-arc" style={{ animationDelay: "1.1s" }} />
-        </g>
-
-        {[
-          { x: 185, y: 88, r: 5, color: "#0D9488", label: "EWR" },
-          { x: 405, y: 62, r: 3.5, color: "#14B8A6" },
-          { x: 520, y: 55, r: 3, color: "#1E3A5F" },
-          { x: 398, y: 145, r: 3, color: "#0D9488" },
-          { x: 215, y: 195, r: 3, color: "#F59E0B" },
-          { x: 630, y: 232, r: 2.5, color: "#1E3A5F" },
-          { x: 155, y: 115, r: 3, color: "#14B8A6" },
-        ].map((dot, i) => (
-          <g key={i}>
-            <circle cx={dot.x} cy={dot.y} r={dot.r * 2.5} fill={dot.color} fillOpacity="0.1">
-              <animate attributeName="r" values={`${dot.r * 2.5};${dot.r * 3.5};${dot.r * 2.5}`} dur={`${3 + i * 0.4}s`} repeatCount="indefinite" />
-            </circle>
-            <circle cx={dot.x} cy={dot.y} r={dot.r} fill={dot.color} fillOpacity="0.8" />
-          </g>
-        ))}
-        <text x="185" y="78" fill="rgba(13,148,136,0.6)" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">EWR</text>
-      </svg>
-
-      <div className="absolute top-3 left-4 flex items-center gap-2">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-teal-300/50 tracking-wider">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400/60" />
-          FLIGHT MAP
-        </div>
-      </div>
-    </div>
-  );
-}
+/* WorldMapHero replaced by shared FlightMap component */
 
 /* ─── Horizontal Bar ─── */
 function HBar({ label, count, max, color = "#0D9488" }: { label: string; count: number; max: number; color?: string }) {
@@ -281,7 +223,7 @@ export default function Dashboard() {
       </div>
 
       <div className="pl-14 lg:pl-4 pr-4 pt-2 max-w-2xl mx-auto">
-        <WorldMapHero trips={filteredTrips} />
+        <FlightMap trips={filteredTrips} variant="hero" className="mb-4" />
 
         {countries.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 mb-5 justify-center">

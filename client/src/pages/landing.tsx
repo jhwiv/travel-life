@@ -14,6 +14,7 @@ import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
 import type { Trip } from "@shared/schema";
 import { getTrips, addTrip, computeAnalytics } from "@/lib/static-data";
+import FlightMap from "@/components/flight-map";
 
 interface Analytics {
   totalTrips: number;
@@ -78,76 +79,7 @@ function useCountUp(target: number, duration: number = 1200) {
   return value;
 }
 
-/** Animated world map with flight arcs */
-function HeroFlightMap() {
-  return (
-    <svg viewBox="0 0 800 400" className="absolute inset-0 w-full h-full" aria-hidden>
-      {/* Grid pattern */}
-      <defs>
-        <pattern id="hero-grid" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-          <path d="M80 0 L0 0 0 80" fill="none" stroke="rgba(13,148,136,0.06)" strokeWidth="0.5" />
-        </pattern>
-        <linearGradient id="arc-teal" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#0D9488" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#1E3A5F" stopOpacity="0.3" />
-        </linearGradient>
-        <linearGradient id="arc-gold" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.5" />
-          <stop offset="100%" stopColor="#0D9488" stopOpacity="0.3" />
-        </linearGradient>
-      </defs>
-      <rect width="800" height="400" fill="url(#hero-grid)" />
-
-      {/* Continental outlines */}
-      <g fill="none" stroke="rgba(13,148,136,0.12)" strokeWidth="1" strokeLinecap="round">
-        {/* N. America */}
-        <path d="M120,80 Q140,70 160,75 Q180,65 200,70 L220,80 Q240,75 250,85 L260,100 Q250,120 240,140 L230,160 Q220,170 200,175 L180,165 Q160,155 150,140 L140,120 Q130,100 120,80Z" />
-        {/* S. America */}
-        <path d="M210,200 Q220,190 230,195 L240,210 Q245,230 240,250 L235,270 Q230,280 220,285 L210,275 Q200,260 205,240 L208,220Z" />
-        {/* Europe */}
-        <path d="M370,70 Q380,65 395,68 L410,75 Q420,80 425,90 L420,105 Q415,115 405,118 L390,115 Q380,110 375,100 L370,85Z" />
-        {/* Africa */}
-        <path d="M380,140 Q390,135 400,138 L415,150 Q420,170 418,190 L410,210 Q400,225 390,230 L380,220 Q370,200 372,180 L375,160Z" />
-        {/* Asia */}
-        <path d="M440,60 Q470,50 500,55 L540,65 Q570,70 590,80 L600,95 Q595,110 580,120 L560,125 Q530,130 500,125 L470,115 Q450,105 440,90Z" />
-        {/* Australia */}
-        <path d="M580,220 Q600,215 620,220 L635,230 Q640,240 635,250 L620,255 Q600,258 585,250 L578,240 Q575,230 580,220Z" />
-      </g>
-
-      {/* Flight arcs with draw animation */}
-      <g fill="none" strokeWidth="1.5">
-        {/* EWR → CPH (Europe) */}
-        <path d="M185,100 Q300,30 400,78" stroke="url(#arc-teal)" className="animate-arc" style={{ animationDelay: "0.3s" }} />
-        {/* EWR → ZRH via CPH */}
-        <path d="M400,78 Q410,65 420,82" stroke="url(#arc-teal)" className="animate-arc" style={{ animationDelay: "0.8s" }} />
-        {/* EWR → Aruba (Caribbean) */}
-        <path d="M185,100 Q190,150 210,165" stroke="url(#arc-gold)" className="animate-arc" style={{ animationDelay: "0.5s" }} />
-        {/* EWR → Florida routes */}
-        <path d="M185,100 Q175,130 168,140" stroke="rgba(13,148,136,0.3)" className="animate-arc" style={{ animationDelay: "0.7s" }} />
-      </g>
-
-      {/* City dots */}
-      {[
-        { x: 185, y: 100, r: 5, color: "#0D9488", label: "EWR" },
-        { x: 400, y: 78, r: 3.5, color: "#0D9488" },
-        { x: 420, y: 82, r: 3, color: "#14B8A6" },
-        { x: 210, y: 165, r: 3, color: "#F59E0B" },
-        { x: 168, y: 140, r: 3, color: "#14B8A6" },
-        { x: 630, y: 232, r: 2.5, color: "#1E3A5F" },
-      ].map((dot, i) => (
-        <g key={i}>
-          <circle cx={dot.x} cy={dot.y} r={dot.r * 2.5} fill={dot.color} fillOpacity="0.1">
-            <animate attributeName="r" values={`${dot.r * 2.5};${dot.r * 3.5};${dot.r * 2.5}`} dur={`${2.5 + i * 0.3}s`} repeatCount="indefinite" />
-          </circle>
-          <circle cx={dot.x} cy={dot.y} r={dot.r} fill={dot.color} fillOpacity="0.8" />
-        </g>
-      ))}
-
-      {/* Hub label */}
-      <text x="185" y="90" fill="rgba(13,148,136,0.6)" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">EWR</text>
-    </svg>
-  );
-}
+/* HeroFlightMap replaced by shared FlightMap component */
 
 /* ---------- Smart Train Dialog ---------- */
 function AddTrainDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdded: () => void }) {
@@ -229,7 +161,7 @@ export default function Landing() {
     <div className="min-h-screen flex flex-col animate-page-enter" style={{ background: "linear-gradient(165deg, #0F172A 0%, #0B1929 25%, #0D2137 50%, #0F172A 75%, #091018 100%)" }}>
       {/* Hero Section */}
       <div className="relative flex-1 flex flex-col items-center px-5 pt-10 sm:pt-16 pb-6 overflow-hidden">
-        <HeroFlightMap />
+        <FlightMap trips={trips} variant="background" />
 
         {/* Gradient orbs — teal themed */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
