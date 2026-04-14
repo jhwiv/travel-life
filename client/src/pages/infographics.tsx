@@ -1,15 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Download, Share2, Plane, TrainFront, Globe, MapPin, Route } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getTrips as getLocalTrips, computeAnalytics } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
 
 interface Analytics {
@@ -114,11 +107,21 @@ function StatPill({ value, label, large }: { value: string | number; label: stri
   );
 }
 
+/** Access helpers — handle both camelCase (API) and snake_case (localStorage) property names */
+function $dep(t: any): string { return t.departureDate || t.departure_date || ""; }
+function $depCity(t: any): string { return t.departureCity || t.departure_city || ""; }
+function $depCode(t: any): string { return t.departureCode || t.departure_code || ""; }
+function $depCountry(t: any): string { return t.departureCountry || t.departure_country || ""; }
+function $arrCity(t: any): string { return t.arrivalCity || t.arrival_city || ""; }
+function $arrCode(t: any): string { return t.arrivalCode || t.arrival_code || ""; }
+function $arrCountry(t: any): string { return t.arrivalCountry || t.arrival_country || ""; }
+function $trainOp(t: any): string | null { return t.trainOperator || t.train_operator || null; }
+
 /** Compute combined stats from filtered trips */
 function computeStats(trips: Trip[], year: string) {
   const filtered = year === "all"
     ? trips.filter((t) => t.status === "completed")
-    : trips.filter((t) => t.status === "completed" && t.departureDate.startsWith(year));
+    : trips.filter((t) => t.status === "completed" && $dep(t).startsWith(year));
   const flights = filtered.filter((t) => t.type === "flight");
   const trains = filtered.filter((t) => t.type === "train");
   const totalDistance = filtered.reduce((s, t) => s + (t.distance || 0), 0);
@@ -134,19 +137,20 @@ function computeStats(trips: Trip[], year: string) {
   const airlines = new Set<string>();
   const trainOps = new Set<string>();
   filtered.forEach((t) => {
-    countries.add(t.departureCountry);
-    countries.add(t.arrivalCountry);
-    cities.add(t.departureCity);
-    cities.add(t.arrivalCity);
-    stations.add(t.departureCode);
-    stations.add(t.arrivalCode);
+    countries.add($depCountry(t));
+    countries.add($arrCountry(t));
+    cities.add($depCity(t));
+    cities.add($arrCity(t));
+    stations.add($depCode(t));
+    stations.add($arrCode(t));
     if (t.airline) airlines.add(t.airline);
-    if (t.trainOperator) trainOps.add(t.trainOperator);
+    const op = $trainOp(t);
+    if (op) trainOps.add(op);
   });
 
   const routeCounts: Record<string, number> = {};
   filtered.forEach((t) => {
-    const route = `${t.departureCode} → ${t.arrivalCode}`;
+    const route = `${$depCode(t)} → ${$arrCode(t)}`;
     routeCounts[route] = (routeCounts[route] || 0) + 1;
   });
   const topRoutes = Object.entries(routeCounts)
@@ -155,11 +159,11 @@ function computeStats(trips: Trip[], year: string) {
     .map(([route, count]) => ({ route, count }));
 
   const displayYear = year === "all" ? new Date().getFullYear().toString() : year;
-  const yearTrips = filtered.filter((t) => t.departureDate.startsWith(displayYear));
+  const yearTrips = filtered.filter((t) => $dep(t).startsWith(displayYear));
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const monthCounts = monthNames.map((_, i) => {
     const m = String(i + 1).padStart(2, "0");
-    return yearTrips.filter((t) => t.departureDate.substring(5, 7) === m).length;
+    return yearTrips.filter((t) => $dep(t).substring(5, 7) === m).length;
   });
 
   return {
@@ -581,13 +585,13 @@ function DistanceBreakdown({ trips, year }: { trips: Trip[]; year: string }) {
 function YearInReview({ trips, year }: { trips: Trip[]; year: string }) {
   const s = computeStats(trips, year);
   const maxMonth = Math.max(...s.monthCounts, 1);
-  const yearTrips = trips.filter(t => t.status === "completed" && t.departureDate.startsWith(s.displayYear));
+  const yearTrips = trips.filter(t => t.status === "completed" && $dep(t).startsWith(s.displayYear));
   const yearFlights = yearTrips.filter(t => t.type === "flight").length;
   const yearTrains = yearTrips.filter(t => t.type === "train").length;
   const yearDist = yearTrips.reduce((sum, t) => sum + (t.distance || 0), 0);
-  const yearCountries = new Set(yearTrips.flatMap(t => [t.departureCountry, t.arrivalCountry])).size;
+  const yearCountries = new Set(yearTrips.flatMap(t => [$depCountry(t), $arrCountry(t)])).size;
   const al = new Set(yearTrips.filter(t => t.airline).map(t => t.airline!));
-  const tr = new Set(yearTrips.filter(t => t.trainOperator).map(t => t.trainOperator!));
+  const tr = new Set(yearTrips.filter(t => $trainOp(t)).map(t => $trainOp(t)!));
   const allOps = [...Array.from(al), ...Array.from(tr)];
 
   return (
@@ -717,7 +721,7 @@ function TopRoutes({ trips, year }: { trips: Trip[]; year: string }) {
               const routeParts = r.route.split(" → ");
               const dep = routeParts[0];
               const arr = routeParts[1];
-              const routeTrips = s.filtered.filter((t) => t.departureCode === dep && t.arrivalCode === arr);
+              const routeTrips = s.filtered.filter((t) => $depCode(t) === dep && $arrCode(t) === arr);
               const hasFlights = routeTrips.some((t) => t.type === "flight");
               const hasTrains = routeTrips.some((t) => t.type === "train");
 
@@ -785,16 +789,21 @@ export default function Infographics() {
   const [selectedYear, setSelectedYear] = useState("all");
   const { toast } = useToast();
 
-  const { data: analytics } = useQuery<Analytics>({
-    queryKey: ["/api/analytics"],
+  // Try API first, fall back to localStorage seed data for static deployments
+  const { data: apiTrips } = useQuery<Trip[]>({
+    queryKey: ["/api/trips"],
+    retry: false,
   });
 
-  const { data: trips = [] } = useQuery<Trip[]>({
-    queryKey: ["/api/trips"],
-  });
+  const trips = useMemo(() => {
+    if (apiTrips && apiTrips.length > 0) return apiTrips;
+    // Fallback: load from localStorage (seeded from trip-data.json)
+    const local = getLocalTrips() as unknown as Trip[];
+    return local;
+  }, [apiTrips]);
 
   const years = Array.from(
-    new Set(trips.map((t) => t.departureDate.substring(0, 4)))
+    new Set(trips.map((t) => (t.departureDate || (t as any).departure_date || "").substring(0, 4)).filter(Boolean))
   ).sort((a, b) => b.localeCompare(a));
 
   const captureCanvas = async () => {
@@ -858,104 +867,96 @@ export default function Infographics() {
     }
   };
 
-  if (!analytics) {
-    return (
-      <div className="p-6 text-center text-muted-foreground">
-        No data available. Add trips to generate infographics.
-      </div>
-    );
-  }
-
   const infographicOptions: { value: InfographicType; label: string }[] = [
-    { value: "travel-passport", label: "Travel Passport" },
-    { value: "journey-stats", label: "Journey Stats" },
-    { value: "distance-breakdown", label: "Distance Breakdown" },
-    { value: "year-in-review", label: "Year in Review" },
-    { value: "top-routes", label: "Top Routes" },
+    { value: "travel-passport", label: "Passport" },
+    { value: "journey-stats", label: "Journey" },
+    { value: "distance-breakdown", label: "Distance" },
+    { value: "year-in-review", label: "Year" },
+    { value: "top-routes", label: "Routes" },
   ];
 
   return (
     <div className="min-h-screen pb-12">
-      {/* Gradient header */}
-      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-8" style={{ background: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #1a2744 100%)" }}>
+      {/* Compact header */}
+      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-4 pb-5" style={{ background: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #1a2744 100%)" }}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-64 h-64 rounded-full" style={{ background: "radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)" }} />
-          <svg className="absolute inset-0 w-full h-full opacity-[0.05]" aria-hidden>
-            <defs>
-              <pattern id="infog-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                <circle cx="2" cy="2" r="1" fill="white" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#infog-dots)" />
-          </svg>
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)" }} />
         </div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+          {/* Title row with action icons */}
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-bold text-white">Infographics</h2>
-              <p className="text-sm text-white/60 mt-1">
-                Generate shareable travel summaries — flights & trains combined
-              </p>
+              <h2 className="text-lg font-bold text-white leading-tight">Infographics</h2>
+              <p className="text-[11px] text-white/40 mt-0.5">Shareable travel summaries</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
+            <div className="flex items-center gap-1.5">
+              <button
                 onClick={handleShare}
-                variant="outline"
-                size="sm"
-                className="rounded-xl gap-1.5 border-white/15 text-white/80 hover:bg-white/10 hover:text-white bg-transparent"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.08] transition-all"
+                title="Share"
                 data-testid="button-share"
               >
-                <Share2 className="w-4 h-4" /> Share
-              </Button>
-              <Button
+                <Share2 className="w-4 h-4" />
+              </button>
+              <button
                 onClick={handleDownload}
-                variant="outline"
-                size="sm"
-                className="rounded-xl gap-1.5 border-white/15 text-white/80 hover:bg-white/10 hover:text-white bg-transparent"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/[0.08] transition-all"
+                title="Download PNG"
                 data-testid="button-download"
               >
-                <Download className="w-4 h-4" /> PNG
-              </Button>
+                <Download className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Controls integrated into header */}
-          <div className="flex items-center gap-3 flex-wrap mt-4">
-            <Select
-              value={selectedType}
-              onValueChange={(v) => setSelectedType(v as InfographicType)}
-            >
-              <SelectTrigger className="w-52 rounded-xl bg-white/10 border-white/15 text-white [&>svg]:text-white/60" data-testid="select-infographic-type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {infographicOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Infographic type — segmented pill control */}
+          <div className="flex gap-1 p-1 rounded-xl bg-white/[0.06] border border-white/[0.06] overflow-x-auto no-scrollbar" data-testid="select-infographic-type">
+            {infographicOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setSelectedType(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide whitespace-nowrap transition-all ${
+                  selectedType === opt.value
+                    ? "bg-purple-500/25 text-purple-200 shadow-sm shadow-purple-500/10"
+                    : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32 rounded-xl bg-white/10 border-white/15 text-white [&>svg]:text-white/60" data-testid="select-year">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                {years.map((y) => (
-                  <SelectItem key={y} value={y}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Year filter — inline pills */}
+          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar" data-testid="select-year">
+            <button
+              onClick={() => setSelectedYear("all")}
+              className={`px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap transition-all ${
+                selectedYear === "all"
+                  ? "bg-white/[0.12] text-white/80"
+                  : "text-white/30 hover:text-white/50"
+              }`}
+            >
+              All Time
+            </button>
+            {years.map((y) => (
+              <button
+                key={y}
+                onClick={() => setSelectedYear(y)}
+                className={`px-3 py-1 rounded-full text-[10px] font-semibold tracking-wider whitespace-nowrap transition-all ${
+                  selectedYear === y
+                    ? "bg-white/[0.12] text-white/80"
+                    : "text-white/30 hover:text-white/50"
+                }`}
+              >
+                {y}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Infographic Preview */}
-      <div className="flex justify-center px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 -mt-4">
+      <div className="flex justify-center px-4 pl-14 lg:pl-6 pr-4 lg:pr-6 -mt-2">
         <div ref={infographicRef} className="w-full max-w-lg">
           {selectedType === "travel-passport" && (
             <TravelPassport trips={trips} year={selectedYear} />
