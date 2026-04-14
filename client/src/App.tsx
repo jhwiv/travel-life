@@ -18,9 +18,25 @@ import {
   Menu,
   X,
   Home,
+  Plane,
+  TrainFront,
+  Plus,
+  MapPin,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { getTrips, computeAnalytics } from "@/lib/static-data";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
+import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
+import { addTrip } from "@/lib/static-data";
+import { useToast } from "@/hooks/use-toast";
 
 function TravelLifeLogo({ className = "w-7 h-7" }: { className?: string }) {
   return (
@@ -70,6 +86,25 @@ const navItems = [
 function Sidebar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { toast } = useToast();
+  const [flightOpen, setFlightOpen] = useState(false);
+  const [trainOpen, setTrainOpen] = useState(false);
+
+  const analytics = computeAnalytics();
+  const trips = getTrips();
+  const recentFlight = trips.find((t: any) => t.type === "flight");
+
+  const handleAddFlight = (data: FlightFormData) => {
+    addTrip(data);
+    setFlightOpen(false);
+    toast({ title: "Flight added" });
+  };
+
+  const handleAddTrain = (data: TrainFormData) => {
+    addTrip(data);
+    setTrainOpen(false);
+    toast({ title: "Train ride added" });
+  };
 
   return (
     <>
@@ -77,7 +112,7 @@ function Sidebar() {
       <button
         onClick={() => setMobileOpen(!mobileOpen)}
         className="fixed top-3 left-3 z-50 lg:hidden rounded-xl p-2 shadow-sm"
-        style={{ background: "rgba(26,16,64,0.95)", border: "1px solid rgba(139,92,246,0.15)" }}
+        style={{ background: "rgba(15,23,42,0.95)", border: "1px solid rgba(13,148,136,0.15)" }}
         data-testid="button-mobile-menu"
       >
         {mobileOpen ? <X className="w-5 h-5 text-white/80" /> : <Menu className="w-5 h-5 text-white/80" />}
@@ -94,26 +129,56 @@ function Sidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-full w-[220px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
+          "fixed top-0 left-0 z-40 h-full w-[240px] flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{
-          background: "linear-gradient(180deg, #12082e 0%, #0e0a20 50%, #0a0a1a 100%)",
-          borderRight: "1px solid rgba(139,92,246,0.1)",
+          background: "linear-gradient(180deg, #0F172A 0%, #0B1120 50%, #091018 100%)",
+          borderRight: "1px solid rgba(13,148,136,0.1)",
         }}
       >
         {/* Brand */}
         <Link href="/" onClick={() => setMobileOpen(false)}>
-          <div className="flex items-center gap-2.5 px-5 h-14 cursor-pointer hover:bg-purple-500/5 transition-colors" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
-            <div className="text-purple-400">
+          <div className="flex items-center gap-2.5 px-5 h-14 cursor-pointer hover:bg-teal-500/5 transition-colors" style={{ borderBottom: "1px solid rgba(13,148,136,0.08)" }}>
+            <div className="text-teal-400">
               <TravelLifeLogo />
             </div>
-            <span className="text-sm font-bold tracking-tight text-white">Travel Life</span>
+            <span className="text-sm font-bold tracking-tight text-white font-display">Travel Life</span>
           </div>
         </Link>
 
+        {/* Mini travel summary */}
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(13,148,136,0.08)" }}>
+          <div className="glass-card !p-3 !rounded-xl">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[9px] uppercase tracking-wider text-teal-300/50 font-medium">Travel Summary</span>
+              <Plane className="w-3 h-3 text-teal-400/40" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-lg font-bold text-white tabular-nums font-display">{analytics.totalFlights}</p>
+                <p className="text-[9px] text-white/30">Flights</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-white tabular-nums font-display">
+                  {analytics.totalDistance >= 1000 ? `${(analytics.totalDistance / 1000).toFixed(1)}k` : analytics.totalDistance}
+                </p>
+                <p className="text-[9px] text-white/30">Miles</p>
+              </div>
+            </div>
+            {recentFlight && (
+              <div className="mt-2 pt-2 flex items-center gap-1.5" style={{ borderTop: "1px solid rgba(13,148,136,0.1)" }}>
+                <MapPin className="w-3 h-3 text-teal-400/50" />
+                <span className="text-[10px] text-white/40 truncate">
+                  {(recentFlight as any).departureCode} → {(recentFlight as any).arrivalCode}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Nav */}
-        <nav className="flex-1 py-4 px-3 space-y-1">
+        <nav className="flex-1 py-3 px-3 space-y-1">
           {navItems.map((item) => {
             const isActive = location === item.path;
             return (
@@ -126,7 +191,7 @@ function Sidebar() {
                   className={cn(
                     "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all cursor-pointer",
                     isActive
-                      ? "bg-purple-500/15 text-purple-300"
+                      ? "bg-teal-500/15 text-teal-300"
                       : "text-white/50 hover:bg-white/5 hover:text-white/70"
                   )}
                   data-testid={`nav-${item.label.toLowerCase()}`}
@@ -139,11 +204,56 @@ function Sidebar() {
           })}
         </nav>
 
-        {/* Footer */}
-        <div className="px-3 py-3" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
-          <p className="text-[9px] text-white/15 uppercase tracking-[0.15em] px-3">
-            Travel Life v3.0
-          </p>
+        {/* Quick-action buttons */}
+        <div className="px-3 pb-3 space-y-1.5">
+          <Dialog open={flightOpen} onOpenChange={setFlightOpen}>
+            <DialogTrigger asChild>
+              <button className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-medium text-amber-300/70 hover:bg-amber-500/10 hover:text-amber-300 transition-all cursor-pointer">
+                <Plus className="w-3.5 h-3.5" />
+                <Plane className="w-3.5 h-3.5" />
+                Add Flight
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#0F172A] border-teal-500/15 text-white">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-white">
+                  <Plane className="w-5 h-5 text-teal-400" />
+                  Add Flight
+                </DialogTitle>
+              </DialogHeader>
+              <SmartFlightForm onSubmit={handleAddFlight} isPending={false} />
+            </DialogContent>
+          </Dialog>
+          <Dialog open={trainOpen} onOpenChange={setTrainOpen}>
+            <DialogTrigger asChild>
+              <button className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-medium text-amber-300/70 hover:bg-amber-500/10 hover:text-amber-300 transition-all cursor-pointer">
+                <Plus className="w-3.5 h-3.5" />
+                <TrainFront className="w-3.5 h-3.5" />
+                Add Train
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto bg-[#0F172A] border-teal-500/15 text-white">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-white">
+                  <TrainFront className="w-5 h-5 text-amber-400" />
+                  Add Train Ride
+                </DialogTitle>
+              </DialogHeader>
+              <SmartTrainForm onSubmit={handleAddTrain} isPending={false} />
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Branding footer */}
+        <div className="px-3 py-3" style={{ borderTop: "1px solid rgba(13,148,136,0.08)" }}>
+          <div className="flex items-center gap-2 px-3">
+            <div className="w-5 h-5 rounded flex items-center justify-center bg-teal-500/10">
+              <TravelLifeLogo className="w-3 h-3 text-teal-400/40" />
+            </div>
+            <p className="text-[8px] text-white/15 uppercase tracking-[0.15em]">
+              Grand Loop Studio
+            </p>
+          </div>
         </div>
       </aside>
     </>
@@ -153,9 +263,9 @@ function Sidebar() {
 /** Pages that use sidebar layout */
 function WithSidebar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 30%, #0f1628 60%, #0a0a1a 100%)" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "linear-gradient(165deg, #0F172A 0%, #0B1929 30%, #0F172A 60%, #091018 100%)" }}>
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto animate-page-enter">
         {children}
       </main>
     </div>

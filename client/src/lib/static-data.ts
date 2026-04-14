@@ -122,7 +122,8 @@ export function isBaseTripId(id: number): boolean {
 }
 
 export function computeAnalytics() {
-  const completedTrips = _trips.filter(t => t.status === "completed");
+  const allTrips = getTrips();
+  const completedTrips = allTrips.filter(t => t.status === "completed");
   const flights = completedTrips.filter(t => t.type === "flight");
   const trains = completedTrips.filter(t => t.type === "train");
 

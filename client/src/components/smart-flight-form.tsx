@@ -554,7 +554,7 @@ export function SmartFlightForm({ onSubmit, isPending }: SmartFlightFormProps) {
         type="submit"
         className="w-full h-12 rounded-xl text-base font-semibold"
         disabled={!isComplete || isPending}
-        style={{ background: isComplete ? "linear-gradient(135deg, #0ea5e9, #3b82f6)" : undefined }}
+        style={{ background: isComplete ? "linear-gradient(135deg, #F59E0B, #D97706)" : undefined, color: isComplete ? "#0F172A" : undefined }}
       >
         {isPending ? (
           <>

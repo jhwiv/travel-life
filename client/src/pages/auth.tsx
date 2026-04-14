@@ -43,14 +43,14 @@ export default function AuthPage() {
     <div
       className="min-h-screen flex items-center justify-center px-4"
       style={{
-        background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 30%, #0f1628 60%, #0a0a1a 100%)",
+        background: "linear-gradient(165deg, #0F172A 0%, #0D2137 30%, #1E3A5F 60%, #0F172A 100%)",
       }}
     >
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-purple-500/15 border border-purple-400/20 mb-4">
-            <Globe className="w-7 h-7 text-purple-400" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-teal-500/15 border border-teal-400/20 mb-4">
+            <Globe className="w-7 h-7 text-teal-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Travel Life</h1>
           <p className="text-sm text-white/40 mt-1">
@@ -69,7 +69,7 @@ export default function AuthPage() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-purple-400/40 focus:ring-1 focus:ring-purple-400/20 transition-colors"
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-teal-400/40 focus:ring-1 focus:ring-teal-400/20 transition-colors"
                 placeholder="Your name"
                 required={!isLogin}
               />
@@ -84,7 +84,7 @@ export default function AuthPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-purple-400/40 focus:ring-1 focus:ring-purple-400/20 transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-teal-400/40 focus:ring-1 focus:ring-teal-400/20 transition-colors"
               placeholder="username"
               required
               autoComplete="username"
@@ -99,7 +99,7 @@ export default function AuthPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-purple-400/40 focus:ring-1 focus:ring-purple-400/20 transition-colors"
+              className="w-full px-4 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-teal-400/40 focus:ring-1 focus:ring-teal-400/20 transition-colors"
               placeholder="••••••"
               required
               autoComplete={isLogin ? "current-password" : "new-password"}
@@ -115,7 +115,8 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A" }}
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {isLogin ? "Sign In" : "Create Account"}
@@ -130,7 +131,7 @@ export default function AuthPage() {
               setIsLogin(!isLogin);
               setError("");
             }}
-            className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
+            className="text-sm text-teal-400 hover:text-teal-300 transition-colors"
           >
             {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
           </button>

@@ -181,19 +181,19 @@ type InfographicType = "travel-passport" | "journey-stats" | "distance-breakdown
    ───────────────────────────────────────────────────────────────────── */
 function PassportWorldMap({ trips }: { trips: Trip[] }) {
   return (
-    <div className="relative w-full overflow-hidden" style={{ background: "linear-gradient(180deg, #1a1040 0%, #1e1450 100%)" }}>
+    <div className="relative w-full overflow-hidden" style={{ background: "linear-gradient(180deg, #0F172A 0%, #0D2137 100%)" }}>
       <svg viewBox="0 0 800 340" className="w-full" preserveAspectRatio="xMidYMid slice">
         <defs>
           <pattern id="pp-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(139,92,246,0.08)" strokeWidth="0.5" />
+            <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(13,148,136,0.08)" strokeWidth="0.5" />
           </pattern>
           <linearGradient id="pp-arc" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.6" />
+            <stop offset="0%" stopColor="#0D9488" stopOpacity="0.6" />
             <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.3" />
           </linearGradient>
         </defs>
         <rect width="800" height="340" fill="url(#pp-grid)" />
-        <g fill="none" stroke="rgba(139,92,246,0.15)" strokeWidth="1" strokeLinecap="round">
+        <g fill="none" stroke="rgba(13,148,136,0.15)" strokeWidth="1" strokeLinecap="round">
           <path d="M100,65 Q125,55 155,58 Q175,50 200,55 L225,65 Q245,58 260,70 L275,88 Q265,110 255,130 L240,150 Q225,162 200,165 L175,155 Q155,145 145,130 L130,108 Q118,88 100,65Z" />
           <path d="M200,190 Q215,178 228,185 L240,200 Q248,225 242,248 L236,270 Q228,282 218,288 L205,278 Q195,258 200,238Z" />
           <path d="M375,55 Q388,48 405,52 L422,60 Q435,66 440,78 L434,95 Q428,108 415,112 L398,108 Q385,102 378,90 L375,72Z" />
@@ -204,16 +204,16 @@ function PassportWorldMap({ trips }: { trips: Trip[] }) {
         <g fill="none" strokeWidth="1.2">
           <path d="M185,88 Q290,20 405,62" stroke="url(#pp-arc)" strokeDasharray="5,4" />
           <path d="M185,88 Q350,50 520,55" stroke="url(#pp-arc)" strokeDasharray="5,4" />
-          <path d="M185,88 Q290,160 398,145" stroke="rgba(139,92,246,0.2)" strokeDasharray="5,4" />
+          <path d="M185,88 Q290,160 398,145" stroke="rgba(13,148,136,0.2)" strokeDasharray="5,4" />
           <path d="M185,88 Q150,140 215,195" stroke="rgba(6,182,212,0.2)" strokeDasharray="5,4" />
         </g>
         {[
-          { x: 185, y: 88, r: 5, color: "#8b5cf6", label: "EWR" },
-          { x: 405, y: 62, r: 3.5, color: "#6366f1" },
+          { x: 185, y: 88, r: 5, color: "#0D9488", label: "EWR" },
+          { x: 405, y: 62, r: 3.5, color: "#14B8A6" },
           { x: 520, y: 55, r: 3, color: "#06b6d4" },
-          { x: 398, y: 145, r: 3, color: "#a78bfa" },
+          { x: 398, y: 145, r: 3, color: "#5EEAD4" },
           { x: 215, y: 195, r: 3, color: "#22d3ee" },
-          { x: 630, y: 232, r: 2.5, color: "#f472b6" },
+          { x: 630, y: 232, r: 2.5, color: "#F59E0B" },
           { x: 155, y: 115, r: 3, color: "#34d399" },
         ].map((dot, i) => (
           <g key={i}>
@@ -223,10 +223,10 @@ function PassportWorldMap({ trips }: { trips: Trip[] }) {
             <circle cx={dot.x} cy={dot.y} r={dot.r} fill={dot.color} fillOpacity="0.8" />
           </g>
         ))}
-        <text x="185" y="78" fill="rgba(139,92,246,0.6)" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">EWR</text>
+        <text x="185" y="78" fill="rgba(13,148,136,0.6)" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">EWR</text>
       </svg>
-      <div className="absolute top-3 left-4 flex items-center gap-1.5 text-[10px] font-mono text-purple-300/50 tracking-wider">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-400/60" />
+      <div className="absolute top-3 left-4 flex items-center gap-1.5 text-[10px] font-mono text-teal-300/50 tracking-wider">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400/60" />
         FLIGHT MAP
       </div>
     </div>
@@ -244,7 +244,7 @@ function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
     <div
       className="relative overflow-hidden text-white flex flex-col"
       style={{
-        background: "linear-gradient(180deg, #1a1040 0%, #1e1450 30%, #2d1b69 60%, #1e1450 100%)",
+        background: "linear-gradient(180deg, #0F172A 0%, #0D2137 30%, #1E3A5F 60%, #0F172A 100%)",
       }}
     >
       {/* World Map Section */}
@@ -252,7 +252,7 @@ function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
 
       {/* Country Flags Row */}
       {s.countries.length > 0 && (
-        <div className="flex items-center justify-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid rgba(139,92,246,0.12)" }}>
+        <div className="flex items-center justify-center gap-3 px-6 py-4" style={{ borderBottom: "1px solid rgba(13,148,136,0.12)" }}>
           {s.countries.map((c) => (
             <div key={c} className="w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10">
               <span className="text-lg leading-none">{getFlag(c)}</span>
@@ -272,8 +272,8 @@ function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
               Passport · Pass · Pasaporte
             </p>
           </div>
-          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-purple-500/15 border border-purple-400/20">
-            <Globe className="w-5 h-5 text-purple-300" />
+          <div className="w-10 h-10 rounded-full flex items-center justify-center bg-teal-500/15 border border-teal-400/20">
+            <Globe className="w-5 h-5 text-teal-300" />
           </div>
         </div>
       </div>
@@ -282,14 +282,14 @@ function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
       <div className="px-6 pb-4">
         <div className="grid grid-cols-2 gap-6 mb-5">
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Flights</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Flights</p>
             <p className="text-5xl font-extrabold text-white tabular-nums leading-none">{s.flights.length}</p>
           </div>
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Flight Distance</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Flight Distance</p>
             <p className="text-4xl font-extrabold text-white tabular-nums leading-none">
               {Math.round(s.flightDistance).toLocaleString()}
-              <span className="text-lg font-semibold text-purple-300/60 ml-1">mi</span>
+              <span className="text-lg font-semibold text-teal-300/60 ml-1">mi</span>
             </p>
           </div>
         </div>
@@ -297,14 +297,14 @@ function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
         {/* Stats — 2-col row */}
         <div className="grid grid-cols-2 gap-6 mb-5">
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Train Rides</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Train Rides</p>
             <p className="text-5xl font-extrabold text-white tabular-nums leading-none">{s.trains.length}</p>
           </div>
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Total Distance</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Total Distance</p>
             <p className="text-4xl font-extrabold text-white tabular-nums leading-none">
               {Math.round(s.totalDistance).toLocaleString()}
-              <span className="text-lg font-semibold text-purple-300/60 ml-1">mi</span>
+              <span className="text-lg font-semibold text-teal-300/60 ml-1">mi</span>
             </p>
           </div>
         </div>
@@ -312,36 +312,36 @@ function TravelPassport({ trips, year }: { trips: Trip[]; year: string }) {
         {/* Stats — 3-col row */}
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Travel Time</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Travel Time</p>
             <p className="text-2xl font-extrabold text-white tabular-nums leading-none">
               {dur}
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Airports</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Airports</p>
             <p className="text-2xl font-extrabold text-white tabular-nums leading-none">{s.stations.size}</p>
           </div>
           <div>
-            <p className="text-[10px] text-purple-300/50 uppercase tracking-wider font-medium mb-1">Countries</p>
+            <p className="text-[10px] text-teal-300/50 uppercase tracking-wider font-medium mb-1">Countries</p>
             <p className="text-2xl font-extrabold text-white tabular-nums leading-none">{s.countries.length}</p>
           </div>
         </div>
       </div>
 
       {/* MRZ Footer */}
-      <div className="mt-auto px-6 pt-4 pb-5" style={{ borderTop: "1px solid rgba(139,92,246,0.12)" }}>
+      <div className="mt-auto px-6 pt-4 pb-5" style={{ borderTop: "1px solid rgba(13,148,136,0.12)" }}>
         <div className="font-mono text-[9px] text-white/25 leading-relaxed tracking-[0.15em] overflow-hidden">
           <p>{mrzPad(`ALLTIME<<<MEMBER${dateStr}<<TRAVELLIFE`, 44)}</p>
           <p>{mrzPad(`ISSUED${dateStr}EWR<<<TRAVELLIFE<<<GRANDLOOPSTUDIO.COM`, 44)}</p>
         </div>
-        <div className="mt-3 h-[2px] rounded-full" style={{ background: "linear-gradient(90deg, #8b5cf6, #6366f1, #8b5cf6)" }} />
+        <div className="mt-3 h-[2px] rounded-full" style={{ background: "linear-gradient(90deg, #0D9488, #14B8A6, #0D9488)" }} />
       </div>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   2. JOURNEY STATS — rich blue-to-indigo with neon accents
+   2. JOURNEY STATS — teal-to-deep-blue with neon accents
    ───────────────────────────────────────────────────────────────────── */
 function JourneyStats({ trips, year }: { trips: Trip[]; year: string }) {
   const s = computeStats(trips, year);
@@ -350,38 +350,38 @@ function JourneyStats({ trips, year }: { trips: Trip[]; year: string }) {
     <div
       className="relative rounded-3xl overflow-hidden text-white min-h-[560px] flex flex-col justify-between"
       style={{
-        background: "linear-gradient(155deg, #020e27 0%, #0a2463 30%, #1e3a7a 55%, #0d1f4b 80%, #05091a 100%)",
+        background: "linear-gradient(155deg, #0F172A 0%, #0D9488 30%, #1E3A5F 55%, #0F172A 80%, #091018 100%)",
       }}
     >
       <DotPattern opacity={0.05} />
       <DecoRing className="w-48 h-48 -top-12 -right-12" />
 
       {/* Accent line */}
-      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #38bdf8 30%, #818cf8 50%, #38bdf8 70%, transparent)" }} />
+      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #14B8A6 30%, #1E3A5F 50%, #14B8A6 70%, transparent)" }} />
 
       <div className="relative z-10 p-7">
         <div className="flex items-start justify-between mb-7">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-1">Travel Life</p>
-            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-sky-300 to-indigo-300 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text text-transparent">
               JOURNEY STATS
             </h2>
             <p className="text-[10px] tracking-[0.15em] opacity-40 mt-2 uppercase">
               {year === "all" ? "All Time" : year} · Sky & Rail
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-sky-500/10 border border-sky-400/20">
-            <Route className="w-6 h-6 text-sky-300" />
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-teal-500/10 border border-teal-400/20">
+            <Route className="w-6 h-6 text-teal-300" />
           </div>
         </div>
 
         {/* Flight section */}
         <div className="mb-5">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-sky-400/15 flex items-center justify-center">
-              <Plane className="w-3.5 h-3.5 text-sky-300" />
+            <div className="w-7 h-7 rounded-lg bg-teal-400/15 flex items-center justify-center">
+              <Plane className="w-3.5 h-3.5 text-teal-300" />
             </div>
-            <span className="text-xs uppercase tracking-[0.2em] text-sky-300/80 font-semibold">Flights</span>
+            <span className="text-xs uppercase tracking-[0.2em] text-teal-300/80 font-semibold">Flights</span>
           </div>
           <div className="grid grid-cols-3 gap-x-4 ml-9">
             <StatPill value={s.flights.length} label="Trips" />
@@ -407,10 +407,10 @@ function JourneyStats({ trips, year }: { trips: Trip[]; year: string }) {
         {/* Train section */}
         <div className="mb-5">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-7 h-7 rounded-lg bg-indigo-400/15 flex items-center justify-center">
-              <TrainFront className="w-3.5 h-3.5 text-indigo-300" />
+            <div className="w-7 h-7 rounded-lg bg-amber-400/15 flex items-center justify-center">
+              <TrainFront className="w-3.5 h-3.5 text-amber-300" />
             </div>
-            <span className="text-xs uppercase tracking-[0.2em] text-indigo-300/80 font-semibold">Trains</span>
+            <span className="text-xs uppercase tracking-[0.2em] text-amber-300/80 font-semibold">Trains</span>
           </div>
           <div className="grid grid-cols-3 gap-x-4 ml-9">
             <StatPill value={s.trains.length} label="Rides" />
@@ -451,7 +451,7 @@ function JourneyStats({ trips, year }: { trips: Trip[]; year: string }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   3. DISTANCE BREAKDOWN — emerald-to-teal with vibrant bars
+   3. DISTANCE BREAKDOWN — teal-to-deep-blue with vibrant bars
    ───────────────────────────────────────────────────────────────────── */
 function DistanceBreakdown({ trips, year }: { trips: Trip[]; year: string }) {
   const s = computeStats(trips, year);
@@ -463,27 +463,27 @@ function DistanceBreakdown({ trips, year }: { trips: Trip[]; year: string }) {
     <div
       className="relative rounded-3xl overflow-hidden text-white min-h-[560px] flex flex-col justify-between"
       style={{
-        background: "linear-gradient(155deg, #021a12 0%, #064e3b 25%, #047857 45%, #0e7490 70%, #0c4a6e 100%)",
+        background: "linear-gradient(155deg, #0F172A 0%, #0D9488 25%, #14B8A6 45%, #1E3A5F 70%, #0F172A 100%)",
       }}
     >
       <DotPattern opacity={0.05} />
       <DecoRing className="w-56 h-56 -bottom-16 -right-16 opacity-40" />
 
-      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #34d399 30%, #22d3ee 70%, transparent)" }} />
+      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #14B8A6 30%, #0D9488 70%, transparent)" }} />
 
       <div className="relative z-10 p-7">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-1">Travel Life</p>
-            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-emerald-300 to-cyan-300 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text text-transparent">
               DISTANCE BREAKDOWN
             </h2>
             <p className="text-[10px] tracking-[0.15em] opacity-40 mt-2 uppercase">
               {year === "all" ? "All Time" : year} · Air vs Rail
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-emerald-400/10 border border-emerald-400/20">
-            <MapPin className="w-6 h-6 text-emerald-300" />
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-teal-400/10 border border-teal-400/20">
+            <MapPin className="w-6 h-6 text-teal-300" />
           </div>
         </div>
 
@@ -501,8 +501,8 @@ function DistanceBreakdown({ trips, year }: { trips: Trip[]; year: string }) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-emerald-400/15 flex items-center justify-center">
-                  <Plane className="w-3 h-3 text-emerald-300" />
+                <div className="w-6 h-6 rounded-md bg-teal-400/15 flex items-center justify-center">
+                  <Plane className="w-3 h-3 text-teal-300" />
                 </div>
                 <span className="text-sm font-semibold">Flights</span>
                 <span className="text-[10px] opacity-40 ml-1">{Math.round(flightPct)}%</span>
@@ -541,7 +541,7 @@ function DistanceBreakdown({ trips, year }: { trips: Trip[]; year: string }) {
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${(s.trainDistance / maxDist) * 100}%`,
-                  background: "linear-gradient(90deg, #22d3ee, #818cf8)",
+                  background: "linear-gradient(90deg, #22d3ee, #1E3A5F)",
                   boxShadow: "0 0 12px rgba(34,211,238,0.3)",
                 }}
               />
@@ -597,19 +597,19 @@ function YearInReview({ trips, year }: { trips: Trip[]; year: string }) {
     <div
       className="relative rounded-3xl overflow-hidden text-white min-h-[560px] flex flex-col justify-between"
       style={{
-        background: "linear-gradient(155deg, #1a0a00 0%, #7c2d12 20%, #c2410c 40%, #ea580c 55%, #b91c1c 75%, #7c1d7e 100%)",
+        background: "linear-gradient(155deg, #0F172A 0%, #1E3A5F 20%, #F59E0B 40%, #D97706 55%, #0D9488 75%, #0F172A 100%)",
       }}
     >
       <DotPattern opacity={0.04} />
       <DecoRing className="w-44 h-44 -top-10 -right-10 opacity-50" />
 
-      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #fbbf24 30%, #fb923c 50%, #f43f5e 70%, transparent)" }} />
+      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #fbbf24 30%, #fb923c 50%, #0D9488 70%, transparent)" }} />
 
       <div className="relative z-10 p-7">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-1">Travel Life</p>
-            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-amber-200 to-rose-200 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-amber-200 to-teal-200 bg-clip-text text-transparent">
               {s.displayYear} IN REVIEW
             </h2>
             <p className="text-[10px] tracking-[0.15em] opacity-40 mt-2 uppercase">Year at a Glance</p>
@@ -680,7 +680,7 @@ function YearInReview({ trips, year }: { trips: Trip[]; year: string }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-   5. TOP ROUTES — rich coral-to-purple with numbered route cards
+   5. TOP ROUTES — teal-to-gold with numbered route cards
    ───────────────────────────────────────────────────────────────────── */
 function TopRoutes({ trips, year }: { trips: Trip[]; year: string }) {
   const s = computeStats(trips, year);
@@ -689,27 +689,27 @@ function TopRoutes({ trips, year }: { trips: Trip[]; year: string }) {
     <div
       className="relative rounded-3xl overflow-hidden text-white min-h-[560px] flex flex-col justify-between"
       style={{
-        background: "linear-gradient(155deg, #1a0505 0%, #7f1d1d 20%, #b91c1c 38%, #be185d 55%, #7e22ce 78%, #3b0764 100%)",
+        background: "linear-gradient(155deg, #0F172A 0%, #1E3A5F 20%, #0D9488 38%, #14B8A6 55%, #1E3A5F 78%, #0F172A 100%)",
       }}
     >
       <DotPattern opacity={0.04} />
       <DecoRing className="w-36 h-36 top-32 -right-8 opacity-40" />
 
-      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #f87171 20%, #f472b6 50%, #c084fc 80%, transparent)" }} />
+      <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #0D9488 20%, #F59E0B 50%, #5EEAD4 80%, transparent)" }} />
 
       <div className="relative z-10 p-7">
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 mb-1">Travel Life</p>
-            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-rose-300 to-purple-300 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-extrabold tracking-tight leading-none bg-gradient-to-r from-teal-300 to-amber-300 bg-clip-text text-transparent">
               TOP ROUTES
             </h2>
             <p className="text-[10px] tracking-[0.15em] opacity-40 mt-2 uppercase">
               {year === "all" ? "All Time" : year} · Flights & Trains
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-rose-400/10 border border-rose-400/20">
-            <MapPin className="w-6 h-6 text-rose-300" />
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-teal-400/10 border border-teal-400/20">
+            <MapPin className="w-6 h-6 text-teal-300" />
           </div>
         </div>
 
@@ -746,7 +746,7 @@ function TopRoutes({ trips, year }: { trips: Trip[]; year: string }) {
                           className="h-full rounded-full"
                           style={{
                             width: `${(r.count / maxCount) * 100}%`,
-                            background: "linear-gradient(90deg, #f87171, #c084fc)",
+                            background: "linear-gradient(90deg, #0D9488, #5EEAD4)",
                             boxShadow: "0 0 8px rgba(248,113,113,0.25)",
                           }}
                         />
@@ -868,9 +868,9 @@ export default function Infographics() {
   return (
     <div className="min-h-screen pb-12">
       {/* Compact header */}
-      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-4 pb-5" style={{ background: "linear-gradient(135deg, #1a1040 0%, #2d1b69 50%, #1a2744 100%)" }}>
+      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-4 pb-5" style={{ background: "linear-gradient(135deg, #0F172A 0%, #0D2137 50%, #1E3A5F 100%)" }}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 right-0 w-48 h-48 rounded-full" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)" }} />
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full" style={{ background: "radial-gradient(circle, rgba(13,148,136,0.08) 0%, transparent 70%)" }} />
         </div>
         <div className="relative z-10">
           {/* Title row with action icons */}
@@ -907,7 +907,7 @@ export default function Infographics() {
                 onClick={() => setSelectedType(opt.value)}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wide whitespace-nowrap transition-all ${
                   selectedType === opt.value
-                    ? "bg-purple-500/25 text-purple-200 shadow-sm shadow-purple-500/10"
+                    ? "bg-teal-500/25 text-teal-200 shadow-sm shadow-teal-500/10"
                     : "text-white/35 hover:text-white/60 hover:bg-white/[0.04]"
                 }`}
               >
