@@ -11,6 +11,7 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Trips from "@/pages/trips";
 import Infographics from "@/pages/infographics";
+import MapPage from "@/pages/map";
 import {
   LayoutDashboard,
   Route as RouteIcon,
@@ -18,6 +19,7 @@ import {
   Menu,
   X,
   Home,
+  Map,
   Plane,
   TrainFront,
   Plus,
@@ -78,6 +80,7 @@ function TravelLifeLogo({ className = "w-7 h-7" }: { className?: string }) {
 
 const navItems = [
   { path: "/", label: "Home", icon: Home },
+  { path: "/map", label: "Map", icon: Map },
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/trips", label: "Trips", icon: RouteIcon },
   { path: "/infographics", label: "Infographics", icon: Image },
@@ -282,6 +285,9 @@ function App() {
             <Router hook={useHashLocation}>
               <Switch>
                 <Route path="/" component={Landing} />
+                <Route path="/map">
+                  {() => <WithSidebar><MapPage /></WithSidebar>}
+                </Route>
                 <Route path="/dashboard">
                   {() => <WithSidebar><Dashboard /></WithSidebar>}
                 </Route>

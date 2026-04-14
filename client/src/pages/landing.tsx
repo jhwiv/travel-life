@@ -14,7 +14,6 @@ import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
 import type { Trip } from "@shared/schema";
 import { getTrips, addTrip, computeAnalytics } from "@/lib/static-data";
-import FlightMap from "@/components/flight-map";
 
 interface Analytics {
   totalTrips: number;
@@ -161,8 +160,6 @@ export default function Landing() {
     <div className="min-h-screen flex flex-col animate-page-enter" style={{ background: "linear-gradient(165deg, #0F172A 0%, #0B1929 25%, #0D2137 50%, #0F172A 75%, #091018 100%)" }}>
       {/* Hero Section */}
       <div className="relative flex-1 flex flex-col items-center px-5 pt-10 sm:pt-16 pb-6 overflow-hidden">
-        <FlightMap trips={trips} variant="background" />
-
         {/* Gradient orbs — teal themed */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[10%] left-[15%] w-[500px] h-[500px] rounded-full" style={{ background: "radial-gradient(circle, rgba(13,148,136,0.12) 0%, transparent 70%)" }} />
@@ -237,6 +234,7 @@ export default function Landing() {
           {/* Navigation buttons — minimal, clean */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6 px-4">
             {[
+              { label: "Map", icon: MapPin, path: "/map" },
               { label: "Dashboard", icon: Route, path: "/dashboard" },
               { label: "Infographics", icon: Globe, path: "/infographics" },
               { label: "All Trips", icon: Plane, path: "/trips" },
