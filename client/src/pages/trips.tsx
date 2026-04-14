@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -24,14 +25,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plane, TrainFront, Plus, Trash2, Search, Filter, MapPin, ArrowRight } from "lucide-react";
+import { Plane, TrainFront, Plus, Trash2, Search, Filter, MapPin, CheckSquare, X } from "lucide-react";
 import type { Trip } from "@shared/schema";
 import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
-import { getTrips, addTrip, deleteTrip as removeTrip, isBaseTripId } from "@/lib/static-data";
+import { getTrips, addTrip, deleteTrips } from "@/lib/static-data";
 
 const airlineColors: Record<string, string> = {
   "United Airlines": "#005DAA",
@@ -84,6 +84,11 @@ export default function Trips() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _ = version;
 
+  // Selection mode state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
   const handleAddFlight = useCallback((data: FlightFormData) => {
     addTrip(data);
     setVersion((v) => v + 1);
@@ -98,11 +103,29 @@ export default function Trips() {
     toast({ title: "Train ride added", description: "Your trip has been recorded." });
   }, [toast]);
 
-  const handleDelete = useCallback((id: number) => {
-    removeTrip(id);
+  const handleDeleteSelected = useCallback(() => {
+    const count = selectedIds.size;
+    deleteTrips(Array.from(selectedIds));
     setVersion((v) => v + 1);
-    toast({ title: "Trip deleted" });
-  }, [toast]);
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+    setDeleteDialogOpen(false);
+    toast({ title: `${count} trip${count !== 1 ? "s" : ""} deleted` });
+  }, [selectedIds, toast]);
+
+  const toggleSelection = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
 
   const filteredTrips = trips.filter((trip) => {
     const matchesSearch =
@@ -121,6 +144,16 @@ export default function Trips() {
   const flightCount = trips.filter((t) => t.type === "flight").length;
   const trainCount = trips.filter((t) => t.type === "train").length;
 
+  const allFilteredSelected = filteredTrips.length > 0 && filteredTrips.every((t) => selectedIds.has(t.id));
+
+  const toggleSelectAll = useCallback(() => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTrips.map((t) => t.id)));
+    }
+  }, [allFilteredSelected, filteredTrips]);
+
   return (
     <div className="min-h-screen pb-12 animate-page-enter">
       {/* Gradient header — teal themed */}
@@ -137,49 +170,83 @@ export default function Trips() {
           </svg>
         </div>
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-3">
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-white font-display">Trips</h2>
-            <p className="text-sm text-white/40 mt-1">
+            <p className="text-sm text-white/40 mt-1 truncate">
               {trips.length} total · {flightCount} flights · {trainCount} trains
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Dialog open={dialogOpen && dialogMode === "flight"} onOpenChange={(open) => { setDialogOpen(open); if (open) setDialogMode("flight"); }}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-flight" size="sm" className="gap-1.5 rounded-xl px-4 shadow-lg" style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", border: "none", color: "#0F172A" }}>
-                  <Plus className="w-4 h-4" />
-                  <Plane className="w-4 h-4" />
-                  Flight
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {selectionMode ? (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 rounded-xl px-4 text-white/70 hover:text-white hover:bg-white/10"
+                  onClick={exitSelectionMode}
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <Plane className="w-5 h-5 text-teal-400" />
-                    Add Flight
-                  </DialogTitle>
-                </DialogHeader>
-                <SmartFlightForm onSubmit={handleAddFlight} isPending={false} />
-              </DialogContent>
-            </Dialog>
-            <Dialog open={dialogOpen && dialogMode === "train"} onOpenChange={(open) => { setDialogOpen(open); if (open) setDialogMode("train"); }}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-add-train" size="sm" className="gap-1.5 rounded-xl px-4 shadow-lg" style={{ background: "linear-gradient(135deg, #0D9488, #1E3A5F)", border: "none" }}>
-                  <Plus className="w-4 h-4" />
-                  <TrainFront className="w-4 h-4" />
-                  Train
+                <Button
+                  size="sm"
+                  className="gap-1.5 rounded-xl px-4 shadow-lg bg-red-600 hover:bg-red-700 text-white border-none"
+                  disabled={selectedIds.size === 0}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <TrainFront className="w-5 h-5 text-amber-400" />
-                    Add Train Ride
-                  </DialogTitle>
-                </DialogHeader>
-                <SmartTrainForm onSubmit={handleAddTrain} isPending={false} />
-              </DialogContent>
-            </Dialog>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5 rounded-xl px-4 text-white/50 hover:text-white hover:bg-white/10"
+                  onClick={() => setSelectionMode(true)}
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  Select
+                </Button>
+                <Dialog open={dialogOpen && dialogMode === "flight"} onOpenChange={(open) => { setDialogOpen(open); if (open) setDialogMode("flight"); }}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-add-flight" size="sm" className="gap-1.5 rounded-xl px-4 shadow-lg" style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", border: "none", color: "#0F172A" }}>
+                      <Plus className="w-4 h-4" />
+                      <Plane className="w-4 h-4" />
+                      Flight
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Plane className="w-5 h-5 text-teal-400" />
+                        Add Flight
+                      </DialogTitle>
+                    </DialogHeader>
+                    <SmartFlightForm onSubmit={handleAddFlight} isPending={false} />
+                  </DialogContent>
+                </Dialog>
+                <Dialog open={dialogOpen && dialogMode === "train"} onOpenChange={(open) => { setDialogOpen(open); if (open) setDialogMode("train"); }}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-add-train" size="sm" className="gap-1.5 rounded-xl px-4 shadow-lg" style={{ background: "linear-gradient(135deg, #0D9488, #1E3A5F)", border: "none" }}>
+                      <Plus className="w-4 h-4" />
+                      <TrainFront className="w-4 h-4" />
+                      Train
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <TrainFront className="w-5 h-5 text-amber-400" />
+                        Add Train Ride
+                      </DialogTitle>
+                    </DialogHeader>
+                    <SmartTrainForm onSubmit={handleAddTrain} isPending={false} />
+                  </DialogContent>
+                </Dialog>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -187,6 +254,13 @@ export default function Trips() {
       <div className="px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 -mt-4 space-y-5">
         {/* Filters */}
         <div className="flex items-center gap-3">
+          {selectionMode && (
+            <Checkbox
+              checked={allFilteredSelected}
+              onCheckedChange={toggleSelectAll}
+              className="h-5 w-5 shrink-0 border-white/30 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+            />
+          )}
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-white/30" />
             <Input
@@ -228,16 +302,25 @@ export default function Trips() {
             {filteredTrips.map((trip, idx) => (
               <div
                 key={trip.id}
-                className="glass-card !rounded-2xl !p-4 card-hover"
+                className={`glass-card !rounded-2xl !p-4 card-hover ${selectionMode && selectedIds.has(trip.id) ? "ring-1 ring-teal-400/40" : ""}`}
                 style={{
                   background: idx % 2 === 0
                     ? "rgba(15,23,42,0.6)"
                     : "rgba(15,23,42,0.4)",
                 }}
                 data-testid={`trip-card-${trip.id}`}
+                onClick={selectionMode ? () => toggleSelection(trip.id) : undefined}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {selectionMode && (
+                      <Checkbox
+                        checked={selectedIds.has(trip.id)}
+                        onCheckedChange={() => toggleSelection(trip.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-5 w-5 shrink-0 border-white/30 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+                      />
+                    )}
                     {/* Airline color badge */}
                     <div className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 relative" style={{
                       background: trip.type === "flight"
@@ -253,18 +336,18 @@ export default function Trips() {
                         <TrainFront className="w-[18px] h-[18px] text-amber-400" />
                       )}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white font-display">{trip.departureCode}</span>
+                        <span className="text-sm font-bold text-white font-display shrink-0">{trip.departureCode}</span>
                         {/* Route arc visualization */}
-                        <svg width="32" height="12" viewBox="0 0 32 12" className="text-teal-400/40">
+                        <svg width="32" height="12" viewBox="0 0 32 12" className="text-teal-400/40 shrink-0">
                           <path d="M2,10 Q16,0 30,10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                           <circle cx="2" cy="10" r="1.5" fill="currentColor" />
                           <circle cx="30" cy="10" r="1.5" fill="currentColor" />
                         </svg>
-                        <span className="text-sm font-bold text-white font-display">{trip.arrivalCode}</span>
+                        <span className="text-sm font-bold text-white font-display shrink-0">{trip.arrivalCode}</span>
                       </div>
-                      <p className="text-[11px] text-white/25 mt-0.5">
+                      <p className="text-[11px] text-white/25 mt-0.5 truncate">
                         {trip.departureCity} → {trip.arrivalCity}
                         {" · "}
                         {trip.type === "flight"
@@ -273,54 +356,22 @@ export default function Trips() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right hidden sm:block">
-                      <p className="text-sm tabular-nums font-medium text-white/70">
+                      <p className="text-sm tabular-nums font-medium text-white/70 whitespace-nowrap">
                         {new Date(trip.departureDate).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
                         })}
                       </p>
-                      <p className="text-[11px] text-white/25 tabular-nums">
+                      <p className="text-[11px] text-white/25 tabular-nums whitespace-nowrap">
                         {trip.distance
                           ? `${Math.round(trip.distance).toLocaleString()} mi`
                           : "\u2014"}{" "}
                         · {formatDuration(trip.duration)}
                       </p>
                     </div>
-                    {!isBaseTripId(trip.id) && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-white/20 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-                          data-testid={`button-delete-${trip.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Trip</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Remove {trip.departureCode} → {trip.arrivalCode} from{" "}
-                            {new Date(trip.departureDate).toLocaleDateString()}?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(trip.id)}
-                            className="bg-destructive text-destructive-foreground"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                    )}
                   </div>
                 </div>
               </div>
@@ -328,6 +379,27 @@ export default function Trips() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.size} trip{selectedIds.size !== 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the selected trip{selectedIds.size !== 1 ? "s" : ""} from your list. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete {selectedIds.size} trip{selectedIds.size !== 1 ? "s" : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

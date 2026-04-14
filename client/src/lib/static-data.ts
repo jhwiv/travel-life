@@ -2,6 +2,7 @@
 import baseTripsJson from "./trip-data.json";
 
 const USER_TRIPS_KEY = "travel-life-user-trips";
+const DELETED_IDS_KEY = "travel-life-deleted-trip-ids";
 
 export interface Trip {
   id: number;
@@ -68,9 +69,31 @@ function toCamelCase(trip: any): Trip & Record<string, any> {
   };
 }
 
-// The 15 real flights — always present, never deletable
+// The 15 real flights — always present in source, but can be hidden via deletedTripIds
 const BASE_TRIPS: (Trip & Record<string, any>)[] = (baseTripsJson as any[]).map(toCamelCase);
 const BASE_TRIP_IDS = new Set(BASE_TRIPS.map(t => t.id));
+
+function loadDeletedIds(): Set<number> {
+  try {
+    const raw = localStorage.getItem(DELETED_IDS_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDeletedIds(ids: Set<number>) {
+  try {
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(Array.from(ids)));
+  } catch {
+    // Storage full or unavailable — fail silently
+  }
+}
+
+let _deletedIds = loadDeletedIds();
 
 function loadUserTrips(): (Trip & Record<string, any>)[] {
   try {
@@ -100,7 +123,9 @@ let _nextId = Math.max(
 ) + 1;
 
 export function getTrips() {
-  return [...BASE_TRIPS, ..._userTrips];
+  const base = BASE_TRIPS.filter(t => !_deletedIds.has(t.id));
+  const user = _userTrips.filter(t => !_deletedIds.has(t.id));
+  return [...base, ...user];
 }
 
 export function addTrip(data: any) {
@@ -111,10 +136,20 @@ export function addTrip(data: any) {
 }
 
 export function deleteTrip(id: number) {
-  // Base trips are permanent — only user-added trips can be deleted
-  if (BASE_TRIP_IDS.has(id)) return;
-  _userTrips = _userTrips.filter(t => t.id !== id);
-  saveUserTrips(_userTrips);
+  if (BASE_TRIP_IDS.has(id)) {
+    // Hide base trip via deletedIds
+    _deletedIds.add(id);
+    saveDeletedIds(_deletedIds);
+  } else {
+    _userTrips = _userTrips.filter(t => t.id !== id);
+    saveUserTrips(_userTrips);
+  }
+}
+
+export function deleteTrips(ids: number[]) {
+  for (const id of ids) {
+    deleteTrip(id);
+  }
 }
 
 export function isBaseTripId(id: number): boolean {
