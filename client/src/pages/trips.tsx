@@ -1,6 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -34,6 +32,7 @@ import { Plane, TrainFront, Plus, Trash2, Search, Filter, MapPin } from "lucide-
 import type { Trip } from "@shared/schema";
 import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
+import { getTrips, addTrip, deleteTrip as removeTrip } from "@/lib/static-data";
 
 
 function formatDuration(minutes: number) {
@@ -59,52 +58,31 @@ export default function Trips() {
     return "all";
   });
 
-  const { data: trips = [], isLoading } = useQuery<Trip[]>({
-    queryKey: ["/api/trips"],
-  });
+  // Force re-render after mutations by tracking a version counter
+  const [version, setVersion] = useState(0);
+  const trips = getTrips() as unknown as Trip[];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ = version; // ensure version is in the render dependency
 
-  const createFlightMutation = useMutation({
-    mutationFn: async (data: FlightFormData) => {
-      const res = await apiRequest("POST", "/api/trips", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
-      setDialogOpen(false);
-      toast({ title: "Flight added", description: "Your flight has been recorded." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  const handleAddFlight = useCallback((data: FlightFormData) => {
+    addTrip(data);
+    setVersion((v) => v + 1);
+    setDialogOpen(false);
+    toast({ title: "Flight added", description: "Your flight has been recorded." });
+  }, [toast]);
 
-  const createTrainMutation = useMutation({
-    mutationFn: async (data: TrainFormData) => {
-      const res = await apiRequest("POST", "/api/trips", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
-      setDialogOpen(false);
-      toast({ title: "Train ride added", description: "Your trip has been recorded." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  const handleAddTrain = useCallback((data: TrainFormData) => {
+    addTrip(data);
+    setVersion((v) => v + 1);
+    setDialogOpen(false);
+    toast({ title: "Train ride added", description: "Your trip has been recorded." });
+  }, [toast]);
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/trips/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
-      toast({ title: "Trip deleted" });
-    },
-  });
+  const handleDelete = useCallback((id: number) => {
+    removeTrip(id);
+    setVersion((v) => v + 1);
+    toast({ title: "Trip deleted" });
+  }, [toast]);
 
   const filteredTrips = trips.filter((trip) => {
     const matchesSearch =
@@ -162,8 +140,8 @@ export default function Trips() {
                   </DialogTitle>
                 </DialogHeader>
                 <SmartFlightForm
-                  onSubmit={(data) => createFlightMutation.mutate(data)}
-                  isPending={createFlightMutation.isPending}
+                  onSubmit={handleAddFlight}
+                  isPending={false}
                 />
               </DialogContent>
             </Dialog>
@@ -183,8 +161,8 @@ export default function Trips() {
                   </DialogTitle>
                 </DialogHeader>
                 <SmartTrainForm
-                  onSubmit={(data) => createTrainMutation.mutate(data)}
-                  isPending={createTrainMutation.isPending}
+                  onSubmit={handleAddTrain}
+                  isPending={false}
                 />
               </DialogContent>
             </Dialog>
@@ -219,13 +197,7 @@ export default function Trips() {
         </div>
 
         {/* Trip List */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        ) : filteredTrips.length === 0 ? (
+        {filteredTrips.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <MapPin className="w-10 h-10 text-purple-400/20 mb-3" />
             <p className="text-sm font-medium text-white mb-1">
@@ -325,7 +297,7 @@ export default function Trips() {
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => deleteMutation.mutate(trip.id)}
+                            onClick={() => handleDelete(trip.id)}
                             className="bg-destructive text-destructive-foreground"
                           >
                             Delete

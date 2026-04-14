@@ -1,8 +1,7 @@
 import { useRef, useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Download, Share2, Plane, TrainFront, Globe, MapPin, Route } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getTrips as getLocalTrips, computeAnalytics } from "@/lib/static-data";
+import { getTrips as getLocalTrips } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
 
 interface Analytics {
@@ -789,18 +788,9 @@ export default function Infographics() {
   const [selectedYear, setSelectedYear] = useState("all");
   const { toast } = useToast();
 
-  // Try API first, fall back to localStorage seed data for static deployments
-  const { data: apiTrips } = useQuery<Trip[]>({
-    queryKey: ["/api/trips"],
-    retry: false,
-  });
-
   const trips = useMemo(() => {
-    if (apiTrips && apiTrips.length > 0) return apiTrips;
-    // Fallback: load from localStorage (seeded from trip-data.json)
-    const local = getLocalTrips() as unknown as Trip[];
-    return local;
-  }, [apiTrips]);
+    return getLocalTrips() as unknown as Trip[];
+  }, []);
 
   const years = Array.from(
     new Set(trips.map((t) => (t.departureDate || (t as any).departure_date || "").substring(0, 4)).filter(Boolean))

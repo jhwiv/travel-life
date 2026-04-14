@@ -1,8 +1,6 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Plane, TrainFront, BarChart3, Image, Globe, MapPin, Route, Sparkles, Plus, ArrowRight, ChevronRight } from "lucide-react";
+import { useLocation } from "wouter";
+import { Plane, TrainFront, BarChart3, Image, Globe, MapPin, Route, Sparkles, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-form";
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
 import type { Trip } from "@shared/schema";
+import { getTrips, addTrip, computeAnalytics } from "@/lib/static-data";
 
 interface Analytics {
   totalTrips: number;
@@ -28,21 +27,21 @@ interface Analytics {
 }
 
 const countryFlags: Record<string, string> = {
-  "United States": "🇺🇸", US: "🇺🇸", USA: "🇺🇸",
-  "United Kingdom": "🇬🇧", UK: "🇬🇧", England: "🇬🇧",
-  France: "🇫🇷", Germany: "🇩🇪", Italy: "🇮🇹", Spain: "🇪🇸",
-  Netherlands: "🇳🇱", Belgium: "🇧🇪", Switzerland: "🇨🇭",
-  Austria: "🇦🇹", Portugal: "🇵🇹", Ireland: "🇮🇪",
-  Sweden: "🇸🇪", Norway: "🇳🇴", Denmark: "🇩🇰", Finland: "🇫🇮",
-  Poland: "🇵🇱", "Czech Republic": "🇨🇿", Czechia: "🇨🇿",
-  Greece: "🇬🇷", Turkey: "🇹🇷", Japan: "🇯🇵",
-  "South Korea": "🇰🇷", China: "🇨🇳", India: "🇮🇳",
-  Australia: "🇦🇺", Canada: "🇨🇦", Mexico: "🇲🇽",
-  Croatia: "🇭🇷", Aruba: "🇦🇼",
+  "United States": "\u{1F1FA}\u{1F1F8}", US: "\u{1F1FA}\u{1F1F8}", USA: "\u{1F1FA}\u{1F1F8}",
+  "United Kingdom": "\u{1F1EC}\u{1F1E7}", UK: "\u{1F1EC}\u{1F1E7}", England: "\u{1F1EC}\u{1F1E7}",
+  France: "\u{1F1EB}\u{1F1F7}", Germany: "\u{1F1E9}\u{1F1EA}", Italy: "\u{1F1EE}\u{1F1F9}", Spain: "\u{1F1EA}\u{1F1F8}",
+  Netherlands: "\u{1F1F3}\u{1F1F1}", Belgium: "\u{1F1E7}\u{1F1EA}", Switzerland: "\u{1F1E8}\u{1F1ED}",
+  Austria: "\u{1F1E6}\u{1F1F9}", Portugal: "\u{1F1F5}\u{1F1F9}", Ireland: "\u{1F1EE}\u{1F1EA}",
+  Sweden: "\u{1F1F8}\u{1F1EA}", Norway: "\u{1F1F3}\u{1F1F4}", Denmark: "\u{1F1E9}\u{1F1F0}", Finland: "\u{1F1EB}\u{1F1EE}",
+  Poland: "\u{1F1F5}\u{1F1F1}", "Czech Republic": "\u{1F1E8}\u{1F1FF}", Czechia: "\u{1F1E8}\u{1F1FF}",
+  Greece: "\u{1F1EC}\u{1F1F7}", Turkey: "\u{1F1F9}\u{1F1F7}", Japan: "\u{1F1EF}\u{1F1F5}",
+  "South Korea": "\u{1F1F0}\u{1F1F7}", China: "\u{1F1E8}\u{1F1F3}", India: "\u{1F1EE}\u{1F1F3}",
+  Australia: "\u{1F1E6}\u{1F1FA}", Canada: "\u{1F1E8}\u{1F1E6}", Mexico: "\u{1F1F2}\u{1F1FD}",
+  Croatia: "\u{1F1ED}\u{1F1F7}", Aruba: "\u{1F1E6}\u{1F1FC}",
 };
 
 function getFlag(country: string) {
-  return countryFlags[country] || "🏳️";
+  return countryFlags[country] || "\u{1F3F3}\u{FE0F}";
 }
 
 function formatDistance(miles: number) {
@@ -91,25 +90,16 @@ function WorldMapSVG() {
 }
 
 /* ---------- Smart Train Dialog ---------- */
-function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
+function AddTrainDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdded: () => void }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const createMutation = useMutation({
-    mutationFn: async (data: TrainFormData) => {
-      const res = await apiRequest("POST", "/api/trips", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
-      setDialogOpen(false);
-      toast({ title: "Train ride added", description: "Your trip has been recorded." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  const handleSubmit = (data: TrainFormData) => {
+    addTrip(data);
+    setDialogOpen(false);
+    onAdded();
+    toast({ title: "Train ride added", description: "Your trip has been recorded." });
+  };
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -122,8 +112,8 @@ function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
           </DialogTitle>
         </DialogHeader>
         <SmartTrainForm
-          onSubmit={(data) => createMutation.mutate(data)}
-          isPending={createMutation.isPending}
+          onSubmit={handleSubmit}
+          isPending={false}
         />
       </DialogContent>
     </Dialog>
@@ -131,25 +121,16 @@ function AddTrainDialog({ trigger }: { trigger: React.ReactNode }) {
 }
 
 /* ---------- Smart Flight Dialog ---------- */
-function AddFlightDialog({ trigger }: { trigger: React.ReactNode }) {
+function AddFlightDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdded: () => void }) {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const createMutation = useMutation({
-    mutationFn: async (data: FlightFormData) => {
-      const res = await apiRequest("POST", "/api/trips", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/analytics"] });
-      setDialogOpen(false);
-      toast({ title: "Flight added", description: "Your flight has been recorded." });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
+  const handleSubmit = (data: FlightFormData) => {
+    addTrip(data);
+    setDialogOpen(false);
+    onAdded();
+    toast({ title: "Flight added", description: "Your flight has been recorded." });
+  };
 
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -162,8 +143,8 @@ function AddFlightDialog({ trigger }: { trigger: React.ReactNode }) {
           </DialogTitle>
         </DialogHeader>
         <SmartFlightForm
-          onSubmit={(data) => createMutation.mutate(data)}
-          isPending={createMutation.isPending}
+          onSubmit={handleSubmit}
+          isPending={false}
         />
       </DialogContent>
     </Dialog>
@@ -172,12 +153,14 @@ function AddFlightDialog({ trigger }: { trigger: React.ReactNode }) {
 
 export default function Landing() {
   const [, navigate] = useLocation();
-  const { data: analytics } = useQuery<Analytics>({
-    queryKey: ["/api/analytics"],
-  });
-  const { data: trips = [] } = useQuery<Trip[]>({
-    queryKey: ["/api/trips"],
-  });
+  const [version, setVersion] = useState(0);
+
+  const analytics = computeAnalytics() as unknown as Analytics;
+  const trips = getTrips() as unknown as Trip[];
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _ = version;
+
+  const onAdded = () => setVersion((v) => v + 1);
 
   const hasData = analytics && analytics.totalTrips > 0;
   const recentTrips = trips.slice(0, 4);
@@ -230,6 +213,7 @@ export default function Landing() {
           {/* Primary action buttons */}
           <div className="flex flex-row items-center justify-center gap-3 mb-6 px-4">
             <AddFlightDialog
+              onAdded={onAdded}
               trigger={
                 <Button size="lg" className="gap-2 px-6 text-sm font-semibold shadow-lg flex-1 sm:flex-none rounded-xl" style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)", border: "none" }}>
                   <Plus className="w-4 h-4" />
@@ -239,6 +223,7 @@ export default function Landing() {
               }
             />
             <AddTrainDialog
+              onAdded={onAdded}
               trigger={
                 <Button size="lg" className="gap-2 px-6 text-sm font-semibold shadow-lg flex-1 sm:flex-none rounded-xl" style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", border: "none" }}>
                   <Plus className="w-4 h-4" />
@@ -249,7 +234,7 @@ export default function Landing() {
             />
           </div>
 
-          {/* Navigation buttons — always visible, functional */}
+          {/* Navigation buttons */}
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6 px-4">
             <Button
               variant="outline"

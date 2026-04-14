@@ -1,17 +1,16 @@
-import { Switch, Route, Router, Link, useLocation, Redirect } from "wouter";
+import { Switch, Route, Router, Link, useLocation } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { AuthProvider } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Trips from "@/pages/trips";
 import Infographics from "@/pages/infographics";
-import AuthPage from "@/pages/auth";
 import {
   LayoutDashboard,
   Route as RouteIcon,
@@ -19,12 +18,9 @@ import {
   Menu,
   X,
   Home,
-  LogOut,
-  User,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
 
 function TravelLifeLogo({ className = "w-7 h-7" }: { className?: string }) {
   return (
@@ -73,12 +69,6 @@ const navItems = [
 function Sidebar() {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-    setMobileOpen(false);
-  };
 
   return (
     <>
@@ -148,26 +138,8 @@ function Sidebar() {
           })}
         </nav>
 
-        {/* Footer with user info */}
+        {/* Footer */}
         <div className="px-3 py-3" style={{ borderTop: "1px solid rgba(139,92,246,0.08)" }}>
-          {user && (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 mb-2">
-              <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0">
-                <User className="w-3.5 h-3.5 text-purple-300" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-white/80 truncate">{user.displayName}</p>
-                <p className="text-[10px] text-white/30 truncate">@{user.username}</p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/40 hover:bg-white/5 hover:text-white/60 transition-colors cursor-pointer"
-          >
-            <LogOut className="w-[18px] h-[18px]" />
-            Sign Out
-          </button>
           <Link href="/" onClick={() => setMobileOpen(false)}>
             <div className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-white/40 hover:bg-white/5 hover:text-white/60 transition-colors cursor-pointer">
               <Home className="w-[18px] h-[18px]" />
@@ -195,46 +167,6 @@ function WithSidebar({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 30%, #0f1628 60%, #0a0a1a 100%)" }}>
-        <Skeleton className="h-12 w-48 rounded-xl bg-white/5" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Redirect to="/auth" />;
-  }
-
-  return (
-    <WithSidebar>
-      <Component />
-    </WithSidebar>
-  );
-}
-
-function AuthRoute() {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(165deg, #0a0a1a 0%, #1a1040 30%, #0f1628 60%, #0a0a1a 100%)" }}>
-        <Skeleton className="h-12 w-48 rounded-xl bg-white/5" />
-      </div>
-    );
-  }
-
-  if (user) {
-    return <Redirect to="/dashboard" />;
-  }
-
-  return <AuthPage />;
-}
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -245,15 +177,14 @@ function App() {
             <Router hook={useHashLocation}>
               <Switch>
                 <Route path="/" component={Landing} />
-                <Route path="/auth" component={AuthRoute} />
                 <Route path="/dashboard">
-                  {() => <ProtectedRoute component={Dashboard} />}
+                  {() => <WithSidebar><Dashboard /></WithSidebar>}
                 </Route>
                 <Route path="/trips">
-                  {() => <ProtectedRoute component={Trips} />}
+                  {() => <WithSidebar><Trips /></WithSidebar>}
                 </Route>
                 <Route path="/infographics">
-                  {() => <ProtectedRoute component={Infographics} />}
+                  {() => <WithSidebar><Infographics /></WithSidebar>}
                 </Route>
                 <Route component={NotFound} />
               </Switch>

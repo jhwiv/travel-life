@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plane,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Trip } from "@shared/schema";
 import { Link } from "wouter";
+import { getTrips, computeAnalytics } from "@/lib/static-data";
 
 interface Analytics {
   totalTrips: number;
@@ -197,13 +197,9 @@ function YearTab({ label, active, onClick }: { label: string; active: boolean; o
 
 /* ─── Main Dashboard ─── */
 export default function Dashboard() {
-  const { data: analytics, isLoading: analyticsLoading } = useQuery<Analytics>({
-    queryKey: ["/api/analytics"],
-  });
-
-  const { data: trips = [] } = useQuery<Trip[]>({
-    queryKey: ["/api/trips"],
-  });
+  const analytics = computeAnalytics() as Analytics;
+  const trips = getTrips() as unknown as Trip[];
+  const analyticsLoading = false;
 
   const [selectedYear, setSelectedYear] = useState("all");
 
