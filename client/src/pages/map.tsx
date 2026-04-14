@@ -239,16 +239,16 @@ function coastToSvgPoints(
     .join(" ");
 }
 
-/* Fixed label offsets — generous spacing with leader lines for close airports */
+/* Label offsets — aggressively spaced with leader lines for close Florida airports */
 const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string; leaderLine?: boolean }> = {
-  EWR: { dx: -18, dy: -4, anchor: "end" },
-  SRQ: { dx: -30, dy: -20, anchor: "end", leaderLine: true },
-  RSW: { dx: -30, dy: 14, anchor: "end", leaderLine: true },
-  PBI: { dx: 24, dy: -14, anchor: "start", leaderLine: true },
-  EYW: { dx: -30, dy: 28, anchor: "end", leaderLine: true },
-  AUA: { dx: 18, dy: 4, anchor: "start" },
-  CPH: { dx: 14, dy: -10, anchor: "start" },
-  ZRH: { dx: 14, dy: 14, anchor: "start" },
+  EWR: { dx: -20, dy: -8, anchor: "end" },
+  SRQ: { dx: -55, dy: -35, anchor: "end", leaderLine: true },
+  RSW: { dx: -55, dy: 4, anchor: "end", leaderLine: true },
+  PBI: { dx: 45, dy: -30, anchor: "start", leaderLine: true },
+  EYW: { dx: -55, dy: 40, anchor: "end", leaderLine: true },
+  AUA: { dx: 18, dy: 6, anchor: "start" },
+  CPH: { dx: 14, dy: -14, anchor: "start" },
+  ZRH: { dx: 14, dy: 18, anchor: "start" },
 };
 
 const countryFlags: Record<string, string> = {
