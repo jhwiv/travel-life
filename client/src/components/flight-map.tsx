@@ -2,20 +2,62 @@ import { useState, useMemo } from "react";
 import { AIRPORTS } from "@/lib/airport-data";
 import type { Trip } from "@shared/schema";
 
-/* ─── Coordinate projection (Mercator-like, fit to SVG viewBox 0 0 800 450) ─── */
-const VIEW_W = 800;
-const VIEW_H = 450;
-const MAP_PAD = 30;
+/* ─── Fitted Bounding Box Projection ─── */
+const VIEW_W = 960;
+const VIEW_H = 520;
 
-function project(lat: number, lon: number): { x: number; y: number } {
-  // Simple equirectangular projection centered roughly for Atlantic flights
-  const x = MAP_PAD + ((lon + 180) / 360) * (VIEW_W - MAP_PAD * 2);
-  // Clamp latitude and apply mild Mercator stretch
-  const latRad = (Math.max(-60, Math.min(75, lat)) * Math.PI) / 180;
-  const mercY = Math.log(Math.tan(Math.PI / 4 + latRad / 2));
-  const yNorm = (mercY - (-1.0)) / (1.6 - (-1.0)); // normalise ~[-60,75] range
-  const y = VIEW_H - MAP_PAD - yNorm * (VIEW_H - MAP_PAD * 2);
-  return { x, y };
+function createFittedProjection(airportCodes: string[]) {
+  const coords = airportCodes
+    .map((c) => AIRPORTS[c])
+    .filter(Boolean)
+    .map((a) => ({ lat: a.lat, lon: a.lon }));
+
+  if (coords.length === 0) {
+    return {
+      project: (lat: number, lon: number) => ({
+        x: ((lon + 180) / 360) * VIEW_W,
+        y: (1 - (lat + 60) / 140) * VIEW_H,
+      }),
+    };
+  }
+
+  let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
+  for (const c of coords) {
+    if (c.lat < minLat) minLat = c.lat;
+    if (c.lat > maxLat) maxLat = c.lat;
+    if (c.lon < minLon) minLon = c.lon;
+    if (c.lon > maxLon) maxLon = c.lon;
+  }
+
+  const latRange = maxLat - minLat || 10;
+  const lonRange = maxLon - minLon || 10;
+  const padLat = latRange * 0.35;
+  const padLon = lonRange * 0.35;
+  minLat -= padLat;
+  maxLat += padLat;
+  minLon -= padLon;
+  maxLon += padLon;
+  minLat = Math.max(minLat, -70);
+  maxLat = Math.min(maxLat, 80);
+
+  function mercY(lat: number) {
+    const latRad = (Math.max(-70, Math.min(80, lat)) * Math.PI) / 180;
+    return Math.log(Math.tan(Math.PI / 4 + latRad / 2));
+  }
+
+  const yMin = mercY(minLat);
+  const yMax = mercY(maxLat);
+  const PAD = 60;
+
+  function project(lat: number, lon: number) {
+    const x = PAD + ((lon - minLon) / (maxLon - minLon)) * (VIEW_W - PAD * 2);
+    const my = mercY(lat);
+    const yNorm = (my - yMin) / (yMax - yMin);
+    const y = VIEW_H - PAD - yNorm * (VIEW_H - PAD * 2);
+    return { x, y };
+  }
+
+  return { project };
 }
 
 function arcPath(x1: number, y1: number, x2: number, y2: number): string {
@@ -24,32 +66,109 @@ function arcPath(x1: number, y1: number, x2: number, y2: number): string {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const dist = Math.sqrt(dx * dx + dy * dy);
-  // Curve up — perpendicular offset proportional to distance
-  const curvature = Math.min(dist * 0.35, 120);
-  const cx = mx - (dy / dist) * curvature;
-  const cy = my + (dx / dist) * curvature * 0.3 - curvature * 0.5;
+  const curvature = Math.min(dist * 0.25, 80);
+  const nx = -dy / dist;
+  const ny = dx / dist;
+  const cx = mx + nx * curvature;
+  const cy = my + ny * curvature * 0.3 - curvature * 0.4;
   return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
 }
 
-/* Continent outline paths — slightly brighter for contrast */
-const CONTINENTS = [
-  // N. America
-  "M100,85 Q125,70 155,75 Q175,62 200,70 L225,80 Q245,72 260,88 L275,108 Q265,135 255,155 L240,175 Q225,188 200,192 L175,180 Q155,168 145,152 L130,128 Q118,105 100,85Z",
-  // S. America
-  "M200,215 Q215,200 228,208 L240,225 Q248,255 242,280 L236,305 Q228,320 218,328 L205,315 Q195,290 200,268 L203,242Z",
-  // Europe
-  "M375,68 Q388,58 405,64 L422,74 Q435,82 440,96 L434,115 Q428,130 415,135 L398,130 Q385,122 378,108 L375,90Z",
-  // Africa
-  "M385,155 Q398,146 410,152 L428,168 Q435,195 432,222 L422,248 Q410,268 398,275 L385,260 Q374,235 377,205 L380,178Z",
-  // Asia
-  "M450,60 Q485,48 520,54 L565,70 Q600,78 622,95 L632,115 Q626,132 608,145 L585,152 Q548,158 515,148 L480,135 Q458,122 450,100Z",
-  // Australia
-  "M600,248 Q622,238 645,248 L662,262 Q668,278 662,292 L645,298 Q620,302 604,290 L596,275 Q592,260 600,248Z",
+/* ─── Simplified coastlines ─── */
+interface CoastPoint { lat: number; lon: number }
+
+const COASTLINES: { name: string; points: CoastPoint[] }[] = [
+  { name: "us-east", points: [
+    { lat: 47.0, lon: -67.0 }, { lat: 45.0, lon: -67.0 }, { lat: 43.5, lon: -70.0 },
+    { lat: 42.0, lon: -70.5 }, { lat: 41.2, lon: -72.0 }, { lat: 40.5, lon: -74.0 },
+    { lat: 39.5, lon: -74.5 }, { lat: 38.5, lon: -75.5 }, { lat: 37.0, lon: -76.0 },
+    { lat: 35.0, lon: -75.5 }, { lat: 33.5, lon: -78.0 }, { lat: 32.0, lon: -80.5 },
+    { lat: 30.5, lon: -81.5 }, { lat: 28.0, lon: -80.5 }, { lat: 26.0, lon: -80.0 },
+    { lat: 25.0, lon: -80.5 }, { lat: 24.5, lon: -81.8 }, { lat: 25.0, lon: -81.5 },
+    { lat: 26.5, lon: -82.0 }, { lat: 28.0, lon: -82.8 }, { lat: 29.5, lon: -83.5 },
+    { lat: 30.0, lon: -85.5 }, { lat: 30.2, lon: -88.0 }, { lat: 29.5, lon: -89.5 },
+  ]},
+  { name: "cuba", points: [
+    { lat: 22.0, lon: -84.0 }, { lat: 22.5, lon: -81.5 }, { lat: 23.0, lon: -80.0 },
+    { lat: 22.5, lon: -78.0 }, { lat: 21.5, lon: -77.0 }, { lat: 20.5, lon: -75.0 },
+    { lat: 20.0, lon: -74.5 }, { lat: 20.5, lon: -76.0 }, { lat: 21.0, lon: -78.0 },
+    { lat: 21.5, lon: -80.0 }, { lat: 22.0, lon: -82.0 }, { lat: 22.0, lon: -84.0 },
+  ]},
+  { name: "venezuela", points: [
+    { lat: 12.0, lon: -72.0 }, { lat: 11.5, lon: -71.5 }, { lat: 11.0, lon: -70.0 },
+    { lat: 10.5, lon: -68.0 }, { lat: 10.5, lon: -66.0 }, { lat: 10.5, lon: -64.0 },
+  ]},
+  { name: "colombia", points: [
+    { lat: 12.5, lon: -72.0 }, { lat: 11.5, lon: -73.0 }, { lat: 11.0, lon: -75.0 },
+    { lat: 10.5, lon: -76.0 }, { lat: 9.0, lon: -77.5 },
+  ]},
+  { name: "iberia", points: [
+    { lat: 43.5, lon: -8.0 }, { lat: 42.5, lon: -9.0 }, { lat: 39.5, lon: -9.5 },
+    { lat: 37.0, lon: -8.5 }, { lat: 36.0, lon: -5.5 }, { lat: 37.5, lon: -1.5 },
+    { lat: 39.5, lon: 0.5 }, { lat: 41.5, lon: 2.0 }, { lat: 42.5, lon: 3.0 },
+    { lat: 43.5, lon: 1.0 }, { lat: 43.5, lon: -2.0 }, { lat: 43.5, lon: -8.0 },
+  ]},
+  { name: "france-west", points: [
+    { lat: 43.5, lon: -2.0 }, { lat: 46.0, lon: -1.5 }, { lat: 47.5, lon: -3.0 },
+    { lat: 48.5, lon: -5.0 }, { lat: 48.8, lon: -3.5 }, { lat: 49.0, lon: -1.5 },
+    { lat: 49.5, lon: 0.0 }, { lat: 51.0, lon: 2.0 },
+  ]},
+  { name: "britain", points: [
+    { lat: 50.5, lon: -5.0 }, { lat: 51.5, lon: -5.0 }, { lat: 52.5, lon: -5.0 },
+    { lat: 53.5, lon: -4.5 }, { lat: 54.5, lon: -5.5 }, { lat: 55.5, lon: -5.5 },
+    { lat: 57.0, lon: -6.0 }, { lat: 58.5, lon: -5.0 }, { lat: 58.5, lon: -3.0 },
+    { lat: 57.0, lon: -2.0 }, { lat: 55.5, lon: -1.5 }, { lat: 54.0, lon: -0.5 },
+    { lat: 53.0, lon: 0.5 }, { lat: 52.0, lon: 1.5 }, { lat: 51.0, lon: 1.5 },
+    { lat: 50.5, lon: 0.0 }, { lat: 50.5, lon: -3.0 }, { lat: 50.5, lon: -5.0 },
+  ]},
+  { name: "scandinavia-s", points: [
+    { lat: 54.5, lon: 8.5 }, { lat: 55.0, lon: 8.5 }, { lat: 55.5, lon: 9.5 },
+    { lat: 56.0, lon: 10.5 }, { lat: 56.5, lon: 10.0 }, { lat: 57.5, lon: 10.5 },
+    { lat: 57.5, lon: 12.0 }, { lat: 56.5, lon: 13.0 }, { lat: 55.5, lon: 13.5 },
+    { lat: 55.5, lon: 12.5 }, { lat: 55.0, lon: 12.0 },
+  ]},
+  { name: "north-europe", points: [
+    { lat: 51.5, lon: 3.5 }, { lat: 52.5, lon: 5.0 }, { lat: 53.5, lon: 6.0 },
+    { lat: 54.0, lon: 8.0 }, { lat: 54.5, lon: 8.5 },
+  ]},
+  { name: "nw-africa", points: [
+    { lat: 36.0, lon: -5.5 }, { lat: 35.0, lon: -2.0 }, { lat: 34.0, lon: -1.5 },
+    { lat: 33.0, lon: -1.0 }, { lat: 32.0, lon: -1.0 }, { lat: 30.0, lon: -3.0 },
+    { lat: 28.0, lon: -9.5 }, { lat: 27.5, lon: -13.0 },
+  ]},
+  { name: "nw-africa-west", points: [
+    { lat: 36.0, lon: -5.5 }, { lat: 35.5, lon: -6.0 }, { lat: 34.0, lon: -6.5 },
+    { lat: 33.0, lon: -7.5 }, { lat: 32.0, lon: -9.0 }, { lat: 30.0, lon: -10.0 },
+    { lat: 28.0, lon: -9.5 },
+  ]},
 ];
+
+function coastToSvgPoints(
+  coast: CoastPoint[],
+  projectFn: (lat: number, lon: number) => { x: number; y: number },
+): string {
+  return coast
+    .map((p) => {
+      const { x, y } = projectFn(p.lat, p.lon);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+/* Label offsets with leader lines for close airports */
+const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string; leaderLine?: boolean }> = {
+  EWR: { dx: -18, dy: -6, anchor: "end" },
+  SRQ: { dx: -30, dy: -22, anchor: "end", leaderLine: true },
+  RSW: { dx: -30, dy: 16, anchor: "end", leaderLine: true },
+  PBI: { dx: 26, dy: -16, anchor: "start", leaderLine: true },
+  EYW: { dx: -30, dy: 30, anchor: "end", leaderLine: true },
+  AUA: { dx: 18, dy: 4, anchor: "start" },
+  CPH: { dx: 14, dy: -12, anchor: "start" },
+  ZRH: { dx: 14, dy: 16, anchor: "start" },
+};
 
 interface FlightMapProps {
   trips: Trip[];
-  /** "hero" = large centerpiece (dashboard), "background" = full bleed behind content (landing), "compact" = infographic */
   variant?: "hero" | "background" | "compact";
   className?: string;
 }
@@ -57,11 +176,20 @@ interface FlightMapProps {
 export default function FlightMap({ trips, variant = "hero", className = "" }: FlightMapProps) {
   const [hoveredArc, setHoveredArc] = useState<number | null>(null);
 
-  // Build unique airports and arcs from trip data
-  const { airports, arcs, mostRecent } = useMemo(() => {
+  const { airports, arcs, mostRecent, projection } = useMemo(() => {
     const flights = trips.filter(t => t.type === "flight" && t.status === "completed");
-    const airportMap = new Map<string, { code: string; x: number; y: number; count: number; city: string }>();
 
+    const allCodes = new Set<string>();
+    flights.forEach(t => {
+      const depCode = (t as any).departureCode || (t as any).departure_code;
+      const arrCode = (t as any).arrivalCode || (t as any).arrival_code;
+      if (depCode) allCodes.add(depCode);
+      if (arrCode) allCodes.add(arrCode);
+    });
+
+    const proj = createFittedProjection(Array.from(allCodes));
+
+    const airportMap = new Map<string, { code: string; x: number; y: number; count: number; city: string }>();
     flights.forEach(t => {
       const depCode = (t as any).departureCode || (t as any).departure_code;
       const arrCode = (t as any).arrivalCode || (t as any).arrival_code;
@@ -72,7 +200,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
         if (!code) continue;
         const info = AIRPORTS[code];
         if (info) {
-          const { x, y } = project(info.lat, info.lon);
+          const { x, y } = proj.project(info.lat, info.lon);
           const existing = airportMap.get(code);
           if (existing) {
             existing.count++;
@@ -89,40 +217,38 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
       const depInfo = AIRPORTS[depCode];
       const arrInfo = AIRPORTS[arrCode];
       if (!depInfo || !arrInfo) return null;
-      const from = project(depInfo.lat, depInfo.lon);
-      const to = project(arrInfo.lat, arrInfo.lon);
-      const depCity = (t as any).departureCity || (t as any).departure_city;
-      const arrCity = (t as any).arrivalCity || (t as any).arrival_city;
-      const date = (t as any).departureDate || (t as any).departure_date || "";
-      const airline = (t as any).airline || "";
-      const flightNum = (t as any).flightNumber || (t as any).flight_number || "";
+      const from = proj.project(depInfo.lat, depInfo.lon);
+      const to = proj.project(arrInfo.lat, arrInfo.lon);
       return {
         id: i,
         depCode,
         arrCode,
-        depCity,
-        arrCity,
-        date,
-        airline,
-        flightNum,
+        depCity: (t as any).departureCity || (t as any).departure_city,
+        arrCity: (t as any).arrivalCity || (t as any).arrival_city,
+        date: (t as any).departureDate || (t as any).departure_date || "",
+        airline: (t as any).airline || "",
+        flightNum: (t as any).flightNumber || (t as any).flight_number || "",
         path: arcPath(from.x, from.y, to.x, to.y),
         from,
         to,
         distance: t.distance || 0,
       };
-    }).filter(Boolean) as NonNullable<ReturnType<typeof Array.prototype.map>[number]>[];
+    }).filter(Boolean) as any[];
 
-    // Most recent flight (last by departure date)
     const sorted = [...arcList].sort((a: any, b: any) => a.date.localeCompare(b.date));
     const mostRecentArc = sorted.length > 0 ? sorted[sorted.length - 1] : null;
 
-    return { airports: Array.from(airportMap.values()), arcs: arcList as any[], mostRecent: mostRecentArc as any };
+    return {
+      airports: Array.from(airportMap.values()),
+      arcs: arcList,
+      mostRecent: mostRecentArc,
+      projection: proj,
+    };
   }, [trips]);
 
   const isBackground = variant === "background";
   const isCompact = variant === "compact";
 
-  // Size classes per variant
   const wrapperClasses = isBackground
     ? `absolute inset-0 w-full h-full ${className}`
     : isCompact
@@ -139,55 +265,48 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
     <div
       className={wrapperClasses}
       style={{
-        background: isBackground ? "transparent" : "linear-gradient(180deg, #0B1422 0%, #0D1F35 50%, #0B1422 100%)",
+        background: isBackground ? "transparent" : "linear-gradient(180deg, #0a0a2e 0%, #1a1040 50%, #0a0a2e 100%)",
         ...heightStyle,
       }}
     >
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         className="w-full h-full"
-        preserveAspectRatio="xMidYMid slice"
+        preserveAspectRatio="xMidYMid meet"
         aria-hidden
       >
         <defs>
-          {/* Grid */}
-          <pattern id="fm-grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M40 0 L0 0 0 40" fill="none" stroke="rgba(20,184,166,0.07)" strokeWidth="0.5" />
+          <pattern id="fm-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(139,92,246,0.035)" strokeWidth="0.5" />
           </pattern>
 
-          {/* Arc glow gradient */}
           <linearGradient id="fm-arc-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#22D3EE" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#14B8A6" stopOpacity="1" />
-            <stop offset="100%" stopColor="#22D3EE" stopOpacity="0.7" />
+            <stop offset="0%" stopColor="#a855f7" stopOpacity="0.9" />
+            <stop offset="50%" stopColor="#8b5cf6" stopOpacity="1" />
+            <stop offset="100%" stopColor="#c084fc" stopOpacity="0.8" />
           </linearGradient>
 
-          {/* Gold gradient for most recent arc */}
           <linearGradient id="fm-arc-recent" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#F59E0B" stopOpacity="1" />
-            <stop offset="50%" stopColor="#FBBF24" stopOpacity="1" />
-            <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="#facc15" stopOpacity="1" />
+            <stop offset="50%" stopColor="#f59e0b" stopOpacity="1" />
+            <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.9" />
           </linearGradient>
 
-          {/* Glow filter */}
-          <filter id="fm-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id="fm-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+
+          <filter id="fm-glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+
+          <filter id="fm-dot-glow" x="-60%" y="-60%" width="220%" height="220%">
             <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
 
-          {/* Strong glow for hovered/recent arc */}
-          <filter id="fm-glow-strong" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-
-          {/* Dot glow */}
-          <filter id="fm-dot-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-
-          {/* Plane icon symbol */}
           <symbol id="fm-plane" viewBox="0 0 24 24">
             <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="currentColor" />
           </symbol>
@@ -196,14 +315,18 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
         {/* Background grid */}
         <rect width={VIEW_W} height={VIEW_H} fill="url(#fm-grid)" />
 
-        {/* Continental outlines — slightly brighter */}
-        <g fill="none" stroke="rgba(20,184,166,0.22)" strokeWidth="1.2" strokeLinecap="round">
-          {CONTINENTS.map((d, i) => (
-            <path key={i} d={d} />
+        {/* Coastline outlines */}
+        <g fill="none" stroke="rgba(139,92,246,0.12)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          {COASTLINES.map((coast) => (
+            <polyline
+              key={coast.name}
+              points={coastToSvgPoints(coast.points, projection.project)}
+              fill="none"
+            />
           ))}
         </g>
 
-        {/* Arc glow layer (behind) — blurred duplicates for bloom */}
+        {/* Arc glow layer */}
         <g fill="none">
           {arcs.map((arc: any, i: number) => {
             const isRecent = mostRecent && arc.id === mostRecent.id;
@@ -212,18 +335,18 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
               <path
                 key={`glow-${i}`}
                 d={arc.path}
-                stroke={isRecent ? "#F59E0B" : "#14B8A6"}
-                strokeWidth={isHovered ? 8 : isRecent ? 6 : 4}
-                strokeOpacity={isHovered ? 0.4 : isRecent ? 0.3 : 0.15}
+                stroke={isRecent ? "#facc15" : "#8b5cf6"}
+                strokeWidth={isHovered ? 12 : isRecent ? 9 : 6}
+                strokeOpacity={isHovered ? 0.45 : isRecent ? 0.3 : 0.15}
                 filter="url(#fm-glow)"
-                className="animate-arc"
-                style={{ animationDelay: `${0.15 * i}s` }}
+                className="animate-passport-arc"
+                style={{ animationDelay: `${0.12 * i}s` }}
               />
             );
           })}
         </g>
 
-        {/* Flight arcs — main stroke */}
+        {/* Flight arcs */}
         <g fill="none">
           {arcs.map((arc: any, i: number) => {
             const isRecent = mostRecent && arc.id === mostRecent.id;
@@ -233,11 +356,11 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
                 key={`arc-${i}`}
                 d={arc.path}
                 stroke={isRecent ? "url(#fm-arc-recent)" : "url(#fm-arc-glow)"}
-                strokeWidth={isHovered ? 3.5 : isRecent ? 3 : 2}
+                strokeWidth={isHovered ? 3 : isRecent ? 2.5 : 1.8}
                 strokeLinecap="round"
-                className="animate-arc"
+                className="animate-passport-arc"
                 style={{
-                  animationDelay: `${0.15 * i}s`,
+                  animationDelay: `${0.12 * i}s`,
                   cursor: "pointer",
                   transition: "stroke-width 0.2s ease",
                 }}
@@ -249,9 +372,9 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
           })}
         </g>
 
-        {/* Plane icon traveling along the most recent route */}
+        {/* Animated plane */}
         {mostRecent && (
-          <g className="animate-plane-travel" style={{ color: "#FBBF24" }}>
+          <g className="animate-plane-travel" style={{ color: "#fbbf24" }}>
             <animateMotion
               dur="4s"
               begin="1.5s"
@@ -259,46 +382,79 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
               rotate="auto"
               path={mostRecent.path}
             />
-            <use href="#fm-plane" x="-7" y="-7" width="14" height="14" />
+            <use href="#fm-plane" x="-8" y="-8" width="16" height="16" />
           </g>
         )}
 
         {/* Airport dots */}
         {airports.map((ap, i) => {
-          const isHub = ap.count >= 4; // EWR will be the hub
-          const baseR = isHub ? 5 : Math.min(3 + ap.count * 0.5, 4.5);
+          const isHub = ap.count >= 4;
+          const baseR = isHub ? 6 : Math.min(4 + ap.count * 0.5, 5.5);
           return (
             <g key={ap.code}>
-              {/* Outer pulse ring */}
-              <circle cx={ap.x} cy={ap.y} r={baseR * 2} fill={isHub ? "#14B8A6" : "#22D3EE"} fillOpacity="0.12" className="animate-dot-pulse" style={{ animationDelay: `${i * 0.3}s` }}>
-                <animate attributeName="r" values={`${baseR * 2};${baseR * 3};${baseR * 2}`} dur={`${3 + i * 0.2}s`} repeatCount="indefinite" />
-                <animate attributeName="fill-opacity" values="0.12;0.06;0.12" dur={`${3 + i * 0.2}s`} repeatCount="indefinite" />
+              <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#c084fc" : "#a78bfa"} fillOpacity="0.08">
+                <animate attributeName="r" values={`${baseR * 2.5};${baseR * 3.5};${baseR * 2.5}`} dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
+                <animate attributeName="fill-opacity" values="0.08;0.03;0.08" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
               </circle>
-              {/* Inner solid dot */}
-              <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#14B8A6" : "#22D3EE"} fillOpacity="0.95" filter="url(#fm-dot-glow)" />
-              {/* White center */}
-              <circle cx={ap.x} cy={ap.y} r={baseR * 0.4} fill="white" fillOpacity="0.8" />
+              <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#c084fc" : "#a78bfa"} fillOpacity="0.95" filter="url(#fm-dot-glow)" />
+              <circle cx={ap.x} cy={ap.y} r={baseR * 0.3} fill="white" fillOpacity="0.9" />
             </g>
           );
         })}
 
-        {/* Airport code labels */}
+        {/* Airport labels with leader lines */}
         {airports.map((ap) => {
           const isHub = ap.count >= 4;
+          const fixedOffset = LABEL_OFFSETS[ap.code];
+          const dx = fixedOffset ? fixedOffset.dx : 14;
+          const dy = fixedOffset ? fixedOffset.dy : -10;
+          const showLeader = fixedOffset?.leaderLine ?? false;
+          const anchor = (fixedOffset ? fixedOffset.anchor : "start") as "start" | "middle" | "end";
+          const lx = ap.x + dx;
+          const ly = ap.y + dy;
+          const fontSize = 10;
+          const textW = ap.code.length * 6.5 + 8;
+          const textH = fontSize + 5;
+          const pillX = anchor === "end" ? lx - textW + 2 : anchor === "middle" ? lx - textW / 2 : lx - 4;
+          const pillY = ly - textH + 3;
+
           return (
-            <text
-              key={`label-${ap.code}`}
-              x={ap.x}
-              y={ap.y - (isHub ? 12 : 9)}
-              fill={isHub ? "#5EEAD4" : "rgba(255,255,255,0.85)"}
-              fontSize={isHub ? "11" : "9"}
-              fontWeight={isHub ? "bold" : "600"}
-              textAnchor="middle"
-              fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-              style={{ textShadow: "0 0 6px rgba(0,0,0,0.8), 0 0 12px rgba(20,184,166,0.3)" }}
-            >
-              {ap.code}
-            </text>
+            <g key={`label-${ap.code}`}>
+              {showLeader && (
+                <line
+                  x1={ap.x}
+                  y1={ap.y}
+                  x2={lx + (anchor === "end" ? -textW / 2 + 2 : anchor === "start" ? textW / 2 - 2 : 0)}
+                  y2={ly - textH / 2 + 3}
+                  stroke="rgba(168,139,250,0.25)"
+                  strokeWidth="0.7"
+                  strokeDasharray="2,2"
+                />
+              )}
+              <rect
+                x={pillX}
+                y={pillY}
+                width={textW}
+                height={textH}
+                rx={4}
+                ry={4}
+                fill="rgba(10,10,46,0.8)"
+                stroke="rgba(139,92,246,0.2)"
+                strokeWidth="0.5"
+              />
+              <text
+                x={lx}
+                y={ly}
+                fill={isHub ? "#e9d5ff" : "rgba(255,255,255,0.9)"}
+                fontSize={fontSize}
+                fontWeight="600"
+                textAnchor={anchor}
+                fontFamily="'Satoshi', 'General Sans', 'Inter', ui-sans-serif, sans-serif"
+                letterSpacing="0.5"
+              >
+                {ap.code}
+              </text>
+            </g>
           );
         })}
       </svg>
@@ -306,8 +462,8 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
       {/* "FLIGHT MAP" badge */}
       {!isBackground && (
         <div className="absolute top-3 left-4 flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-teal-300/60 tracking-wider uppercase">
-            <span className="inline-block w-2 h-2 rounded-full bg-teal-400/80 animate-dot-pulse" />
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-purple-300/60 tracking-wider uppercase">
+            <span className="inline-block w-2 h-2 rounded-full bg-purple-400/80 animate-dot-pulse" />
             Flight Map
           </div>
           {mostRecent && (
@@ -318,7 +474,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
         </div>
       )}
 
-      {/* Stats overlay — bottom right */}
+      {/* Stats overlay */}
       {variant === "hero" && (
         <div className="absolute bottom-3 right-4 flex items-center gap-3">
           <div className="text-[10px] font-mono text-white/40 tabular-nums">
@@ -330,7 +486,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
         </div>
       )}
 
-      {/* Tooltip on hover */}
+      {/* Tooltip */}
       {hoveredArc !== null && arcs[hoveredArc] && (
         <div
           className="absolute z-20 pointer-events-none px-3 py-2 rounded-lg text-xs font-mono"
@@ -338,22 +494,22 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
             left: "50%",
             bottom: "16px",
             transform: "translateX(-50%)",
-            background: "rgba(15,23,42,0.92)",
-            border: "1px solid rgba(20,184,166,0.3)",
+            background: "rgba(10,10,46,0.95)",
+            border: "1px solid rgba(139,92,246,0.3)",
             backdropFilter: "blur(8px)",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(20,184,166,0.1)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(139,92,246,0.15)",
           }}
         >
           <div className="flex items-center gap-2 text-white/90">
-            <span className="text-teal-300 font-bold">{arcs[hoveredArc].depCode}</span>
-            <span className="text-white/30">→</span>
-            <span className="text-teal-300 font-bold">{arcs[hoveredArc].arrCode}</span>
+            <span className="text-purple-300 font-bold">{arcs[hoveredArc].depCode}</span>
+            <span className="text-white/30">&rarr;</span>
+            <span className="text-purple-300 font-bold">{arcs[hoveredArc].arrCode}</span>
             {arcs[hoveredArc].distance > 0 && (
               <span className="text-white/40 ml-1">{arcs[hoveredArc].distance.toLocaleString()} mi</span>
             )}
           </div>
           <div className="text-white/40 mt-0.5">
-            {arcs[hoveredArc].depCity} → {arcs[hoveredArc].arrCity}
+            {arcs[hoveredArc].depCity} &rarr; {arcs[hoveredArc].arrCity}
             {arcs[hoveredArc].airline && <span className="ml-2 text-amber-300/60">{arcs[hoveredArc].airline} {arcs[hoveredArc].flightNum}</span>}
           </div>
         </div>
