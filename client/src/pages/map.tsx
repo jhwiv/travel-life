@@ -239,16 +239,16 @@ function coastToSvgPoints(
     .join(" ");
 }
 
-/* Fixed label offsets per the spec */
-const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string }> = {
-  EWR: { dx: -10, dy: 1, anchor: "end" },     // LEFT
-  SRQ: { dx: -10, dy: 1, anchor: "end" },     // LEFT
-  RSW: { dx: -10, dy: 14, anchor: "end" },    // LEFT, BELOW SRQ
-  PBI: { dx: 10, dy: 1, anchor: "start" },    // RIGHT
-  EYW: { dx: 0, dy: 16, anchor: "middle" },   // BELOW
-  AUA: { dx: 10, dy: 1, anchor: "start" },    // RIGHT
-  CPH: { dx: 0, dy: -12, anchor: "middle" },  // ABOVE
-  ZRH: { dx: 0, dy: 16, anchor: "middle" },   // BELOW CPH
+/* Fixed label offsets — generous spacing with leader lines for close airports */
+const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string; leaderLine?: boolean }> = {
+  EWR: { dx: -18, dy: -4, anchor: "end" },
+  SRQ: { dx: -30, dy: -20, anchor: "end", leaderLine: true },
+  RSW: { dx: -30, dy: 14, anchor: "end", leaderLine: true },
+  PBI: { dx: 24, dy: -14, anchor: "start", leaderLine: true },
+  EYW: { dx: -30, dy: 28, anchor: "end", leaderLine: true },
+  AUA: { dx: 18, dy: 4, anchor: "start" },
+  CPH: { dx: 14, dy: -10, anchor: "start" },
+  ZRH: { dx: 14, dy: 14, anchor: "start" },
 };
 
 const countryFlags: Record<string, string> = {
@@ -543,25 +543,36 @@ export default function MapPage() {
             );
           })}
 
-          {/* Airport labels with fixed offsets and background pills */}
+          {/* Airport labels with fixed offsets, leader lines, and background pills */}
           {airports.map((ap) => {
             const isHub = ap.count >= 4;
             const fixedOffset = LABEL_OFFSETS[ap.code];
-            // Use fixed offset if available, else smart default
             const dx = fixedOffset ? fixedOffset.dx : 10;
             const dy = fixedOffset ? fixedOffset.dy : -10;
+            const showLeader = fixedOffset?.leaderLine ?? false;
             const anchor = (fixedOffset ? fixedOffset.anchor : "start") as "start" | "middle" | "end";
             const lx = ap.x + dx;
             const ly = ap.y + dy;
-            const fontSize = 11;
-            // Approximate text width for background pill
-            const textW = ap.code.length * 7 + 8;
-            const textH = fontSize + 4;
+            const fontSize = 10;
+            const textW = ap.code.length * 6.5 + 8;
+            const textH = fontSize + 5;
             const pillX = anchor === "end" ? lx - textW + 2 : anchor === "middle" ? lx - textW / 2 : lx - 4;
             const pillY = ly - textH + 3;
 
             return (
               <g key={`label-${ap.code}`}>
+                {/* Leader line from dot to label */}
+                {showLeader && (
+                  <line
+                    x1={ap.x}
+                    y1={ap.y}
+                    x2={lx + (anchor === "end" ? -textW / 2 + 2 : anchor === "start" ? textW / 2 - 2 : 0)}
+                    y2={ly - textH / 2 + 3}
+                    stroke="rgba(168,139,250,0.25)"
+                    strokeWidth="0.7"
+                    strokeDasharray="2,2"
+                  />
+                )}
                 {/* Background pill */}
                 <rect
                   x={pillX}
@@ -570,19 +581,20 @@ export default function MapPage() {
                   height={textH}
                   rx={4}
                   ry={4}
-                  fill="rgba(10,10,46,0.7)"
-                  stroke="rgba(139,92,246,0.15)"
+                  fill="rgba(10,10,46,0.8)"
+                  stroke="rgba(139,92,246,0.2)"
                   strokeWidth="0.5"
                 />
                 {/* Label text */}
                 <text
                   x={lx}
                   y={ly}
-                  fill={isHub ? "#e9d5ff" : "rgba(255,255,255,0.85)"}
+                  fill={isHub ? "#e9d5ff" : "rgba(255,255,255,0.9)"}
                   fontSize={fontSize}
-                  fontWeight="500"
+                  fontWeight="600"
                   textAnchor={anchor}
                   fontFamily="'Satoshi', 'General Sans', 'Inter', ui-sans-serif, sans-serif"
+                  letterSpacing="0.5"
                 >
                   {ap.code}
                 </text>
