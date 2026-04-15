@@ -157,7 +157,7 @@ export default function Trips() {
   return (
     <div className="min-h-screen pb-12 animate-page-enter">
       {/* Gradient header — teal themed */}
-      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-8" style={{ background: "linear-gradient(135deg, #0F172A 0%, #0D2137 50%, #1E3A5F 100%)" }}>
+      <div className="relative overflow-hidden px-5 pl-14 lg:pl-8 pr-5 lg:pr-8 pt-5 pb-10" style={{ background: "linear-gradient(135deg, #0F172A 0%, #0D2137 50%, #1E3A5F 100%)" }}>
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 right-0 w-64 h-64 rounded-full" style={{ background: "radial-gradient(circle, rgba(13,148,136,0.1) 0%, transparent 70%)" }} />
           <svg className="absolute inset-0 w-full h-full opacity-[0.04]" aria-hidden>
@@ -169,7 +169,7 @@ export default function Trips() {
             <rect width="100%" height="100%" fill="url(#trips-dots)" />
           </svg>
         </div>
-        <div className="relative z-10 flex items-center justify-between flex-wrap gap-3">
+        <div className="relative z-10 flex items-center justify-between flex-wrap gap-3 mb-2">
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-white font-display">Trips</h2>
             <p className="text-sm text-white/40 mt-1 truncate">
