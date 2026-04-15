@@ -117,10 +117,8 @@ function saveUserTrips(trips: (Trip & Record<string, any>)[]) {
 
 // User-added trips stored in localStorage
 let _userTrips = loadUserTrips();
-let _nextId = Math.max(
-  BASE_TRIPS.length > 0 ? Math.max(...BASE_TRIPS.map(t => t.id)) : 0,
-  _userTrips.length > 0 ? Math.max(..._userTrips.map(t => t.id)) : 0,
-) + 1;
+// Only consider user trip IDs for next ID (base trips use reserved high IDs 900000+)
+let _nextId = (_userTrips.length > 0 ? Math.max(..._userTrips.map(t => t.id)) : 0) + 1;
 
 export function getTrips() {
   const base = BASE_TRIPS.filter(t => !_deletedIds.has(t.id));
