@@ -110,7 +110,7 @@ export default function Dashboard() {
     );
   }
 
-  if (!analytics)
+  if (!analytics || analytics.totalTrips === 0)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center" style={{ background: "linear-gradient(165deg, #0F172A 0%, #0D2137 30%, #0F172A 60%, #091018 100%)" }}>
         <Globe className="w-12 h-12 text-teal-400/30 mb-4" />
