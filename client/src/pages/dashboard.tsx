@@ -490,24 +490,246 @@ export default function Dashboard() {
   }, []);
 
   const handleShareImage = useCallback(async () => {
-    if (!dashboardRef.current) return;
     const html2canvas = (await import("html2canvas")).default;
-    const canvas = await html2canvas(dashboardRef.current, { backgroundColor: "#0F172A", scale: 2, useCORS: true });
-    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
-    if (!blob) return;
-    if (navigator.share && navigator.canShare) {
-      const file = new File([blob], "travel-life-dashboard.png", { type: "image/png" });
-      const shareData = { files: [file], title: "Travel Life Dashboard" };
-      if (navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-        return;
+
+    // Build an off-screen container with light theme & fixed wide layout
+    const container = document.createElement("div");
+    container.className = "share-image-export";
+    container.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;font-family:'Satoshi','General Sans','Inter',sans-serif;";
+
+    // Gather data
+    const allTrips = getTrips() as unknown as Trip[];
+    const completed = selectedYear === "all"
+      ? allTrips.filter(t => t.status === "completed")
+      : allTrips.filter(t => t.status === "completed" && t.departureDate.startsWith(selectedYear));
+    const fl = completed.filter(t => t.type === "flight");
+    const tr = completed.filter(t => t.type === "train");
+    const dist = completed.reduce((s, t) => s + (t.distance || 0), 0);
+    const dur = completed.reduce((s, t) => s + t.duration, 0);
+    const cSet = new Set<string>();
+    const ciSet = new Set<string>();
+    const apSet = new Set<string>();
+    const alSet = new Set<string>();
+    const toSet = new Set<string>();
+    completed.forEach(t => {
+      cSet.add(t.departureCountry); cSet.add(t.arrivalCountry);
+      ciSet.add(t.departureCity); ciSet.add(t.arrivalCity);
+      apSet.add(t.departureCode); apSet.add(t.arrivalCode);
+      if (t.airline) alSet.add(t.airline);
+      if (t.trainOperator) toSet.add(t.trainOperator);
+    });
+    const ctrs = Array.from(cSet);
+    const durD = Math.floor(dur / 1440);
+    const durH = Math.floor((dur % 1440) / 60);
+    const durM = dur % 60;
+    const durStr = durD > 0 ? `${durD}d ${durH}h` : `${durH}h ${durM}m`;
+    const earthX = (dist / 24901).toFixed(1);
+
+    // Airport ranking
+    const apCounts: Record<string, number> = {};
+    completed.forEach(t => {
+      apCounts[t.departureCode] = (apCounts[t.departureCode] || 0) + 1;
+      apCounts[t.arrivalCode] = (apCounts[t.arrivalCode] || 0) + 1;
+    });
+    const topAP = Object.entries(apCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const maxAP = topAP.length > 0 ? topAP[0][1] : 1;
+
+    // Airline ranking
+    const alCounts: Record<string, number> = {};
+    fl.forEach(t => { if (t.airline) alCounts[t.airline] = (alCounts[t.airline] || 0) + 1; });
+    const topAL = Object.entries(alCounts).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const maxAL = topAL.length > 0 ? topAL[0][1] : 1;
+
+    // Route ranking
+    const rtCounts: Record<string, number> = {};
+    completed.forEach(t => {
+      rtCounts[`${t.departureCode}-${t.arrivalCode}`] = (rtCounts[`${t.departureCode}-${t.arrivalCode}`] || 0) + 1;
+    });
+    const topRT = Object.entries(rtCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const maxRT = topRT.length > 0 ? topRT[0][1] : 1;
+
+    // Weekday counts
+    const wdCounts = [0, 0, 0, 0, 0, 0, 0];
+    completed.forEach(t => { wdCounts[new Date(t.departureDate).getDay()]++; });
+    const maxWD = Math.max(...wdCounts, 1);
+    const wdLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+    // Monthly counts
+    const moCounts = Array.from({ length: 12 }, (_, i) => {
+      const m = String(i + 1).padStart(2, "0");
+      return completed.filter(t => t.departureDate.substring(5, 7) === m).length;
+    });
+    const maxMo = Math.max(...moCounts, 1);
+    const moLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Country counts
+    const ccCounts: Record<string, number> = {};
+    completed.forEach(t => {
+      ccCounts[t.departureCountry] = (ccCounts[t.departureCountry] || 0) + 1;
+      ccCounts[t.arrivalCountry] = (ccCounts[t.arrivalCountry] || 0) + 1;
+    });
+    const topCC = Object.entries(ccCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+    // Helper for bar charts
+    const bar = (label: string, count: number, max: number, color: string) =>
+      `<div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+        <span style="font-size:11px;font-weight:700;color:#64748b;width:55px;text-align:right;flex-shrink:0">${label}</span>
+        <div style="flex:1;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${Math.max((count / max) * 100, 3)}%;background:${color};border-radius:4px"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;color:#94a3b8;width:30px">${count}</span>
+      </div>`;
+
+    // Card wrapper helper
+    const card = (content: string, style = "") =>
+      `<div style="background:white;border:1px solid #99f6e4;border-radius:12px;padding:20px;${style}">${content}</div>`;
+
+    // Stat card helper
+    const stat = (value: string | number, label: string, sub = "") =>
+      `<div style="text-align:center;padding:16px;background:#f0fdfa;border:1px solid #ccfbf1;border-radius:10px">
+        <p style="font-size:32px;font-weight:800;color:#0f766e;margin:0;line-height:1">${value}</p>
+        <p style="font-size:9px;color:#5eead4;text-transform:uppercase;letter-spacing:0.15em;margin:4px 0 0">${label}</p>
+        ${sub ? `<p style="font-size:9px;color:#94a3b8;margin:2px 0 0">${sub}</p>` : ""}
+      </div>`;
+
+    const yearLabel = selectedYear === "all" ? "All Time" : selectedYear;
+    const flags = ctrs.map(c => getFlag(c)).join(" ");
+
+    container.innerHTML = `
+      <div style="background:white;padding:40px 40px 24px;color:#1e293b">
+        <!-- Header -->
+        <div style="text-align:center;margin-bottom:32px">
+          <h1 style="font-size:28px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-0.02em">TRAVEL LIFE</h1>
+          <p style="font-size:11px;color:#14b8a6;text-transform:uppercase;letter-spacing:0.25em;margin:4px 0 0">${yearLabel} · Travel Dashboard</p>
+          <div style="height:2px;width:80px;margin:12px auto 0;background:linear-gradient(90deg,transparent,#14b8a6,transparent)"></div>
+        </div>
+
+        <!-- Flags -->
+        ${ctrs.length > 0 ? `<div style="text-align:center;margin-bottom:24px;font-size:20px;line-height:1.8">${flags}</div>` : ""}
+
+        <!-- Primary KPIs — 2 columns -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          ${stat(completed.length, "Total Trips", `${fl.length} flights · ${tr.length} trains`)}
+          ${stat(formatDistance(dist), "Distance", `avg ${Math.round(dist / (completed.length || 1)).toLocaleString()} mi`)}
+        </div>
+
+        <!-- Secondary KPIs — 4 columns -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+          ${stat(durStr, "Travel Time")}
+          ${stat(apSet.size, "Airports")}
+          ${stat(ctrs.length, "Countries")}
+          ${stat(ciSet.size, "Cities")}
+        </div>
+
+        <!-- Earth comparison -->
+        ${dist > 0 ? `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:linear-gradient(90deg,#f0fdfa,#eff6ff);border:1px solid #ccfbf1;border-radius:10px;margin-bottom:24px">
+          <span style="font-size:20px">🌍</span>
+          <div style="flex:1;height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(parseFloat(earthX) / 15 * 100, 100)}%;background:linear-gradient(90deg,#14b8a6,#f59e0b);border-radius:5px"></div>
+          </div>
+          <span style="font-size:16px;font-weight:800;color:#0f172a">${earthX}x</span>
+          <span style="font-size:11px;color:#64748b">Around Earth</span>
+        </div>` : ""}
+
+        <!-- Charts grid — 2 columns -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+          <!-- Top Airports -->
+          ${card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Top Airports</p>
+            ${topAP.map(([c, n]) => bar(c, n, maxAP, "#0d9488")).join("")}
+          `)}
+
+          <!-- Top Airlines -->
+          ${topAL.length > 0 ? card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Top Airlines</p>
+            ${topAL.map(([c, n]) => bar(c.length > 8 ? c.substring(0, 8) : c, n, maxAL, "#14b8a6")).join("")}
+          `) : card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Operators</p>
+            <p style="font-size:24px;font-weight:800;color:#0f766e;margin:0">${alSet.size + toSet.size}</p>
+            <p style="font-size:11px;color:#94a3b8;margin:4px 0 0">${alSet.size} airlines · ${toSet.size} train ops</p>
+          `)}
+
+          <!-- Top Routes -->
+          ${card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Top Routes</p>
+            ${topRT.map(([r, n]) => bar(r, n, maxRT, "#0d9488")).join("")}
+          `)}
+
+          <!-- Countries -->
+          ${card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Countries & Territories</p>
+            ${topCC.map(([c, n]) => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:16px">${getFlag(c)}</span>
+                  <span style="font-size:12px;font-weight:600;color:#1e293b">${c}</span>
+                </div>
+                <span style="font-size:11px;color:#94a3b8">${n} trips</span>
+              </div>
+            `).join("")}
+          `)}
+        </div>
+
+        <!-- Activity charts — 2 columns -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+          <!-- Weekly chart -->
+          ${card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Trips per Weekday</p>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:90px">
+              ${wdCounts.map((c, i) => `
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+                  ${c > 0 ? `<span style="font-size:9px;font-weight:700;color:#94a3b8">${c}</span>` : ""}
+                  <div style="width:100%;border-radius:3px 3px 0 0;background:${c > 0 ? "linear-gradient(180deg,#14b8a6,#0d9488)" : "#f1f5f9"};height:${c > 0 ? Math.max((c / maxWD) * 100, 8) : 3}%;min-height:${c > 0 ? "6px" : "2px"}"></div>
+                  <span style="font-size:9px;color:#94a3b8;font-weight:500">${wdLabels[i]}</span>
+                </div>
+              `).join("")}
+            </div>
+          `)}
+
+          <!-- Monthly chart -->
+          ${card(`
+            <p style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin:0 0 12px">Monthly Activity</p>
+            <div style="display:flex;align-items:flex-end;gap:4px;height:90px">
+              ${moCounts.map((c, i) => `
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end">
+                  <div style="width:100%;border-radius:3px 3px 0 0;background:${c > 0 ? "linear-gradient(180deg,#14b8a6,#0d9488)" : "#f1f5f9"};height:${c > 0 ? Math.max((c / maxMo) * 100, 8) : 2}%;min-height:${c > 0 ? "4px" : "2px"}"></div>
+                  <span style="font-size:7px;color:#94a3b8;font-weight:500">${moLabels[i]}</span>
+                </div>
+              `).join("")}
+            </div>
+          `)}
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align:center;padding-top:16px;border-top:1px solid #e2e8f0">
+          <p style="font-size:8px;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.3em;margin:0">Travel Life · grandloopstudio.com</p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(container);
+
+    try {
+      const canvas = await html2canvas(container, { backgroundColor: "#ffffff", scale: 2, useCORS: true, width: 1200 });
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
+      if (!blob) return;
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], "travel-life-dashboard.png", { type: "image/png" });
+        const shareData = { files: [file], title: "Travel Life Dashboard" };
+        if (navigator.canShare(shareData)) {
+          await navigator.share(shareData);
+          return;
+        }
       }
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = "travel-life-dashboard.png";
+      link.click();
+    } finally {
+      document.body.removeChild(container);
     }
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = "travel-life-dashboard.png";
-    link.click();
-  }, []);
+  }, [selectedYear]);
 
   if (analyticsLoading) {
     return (

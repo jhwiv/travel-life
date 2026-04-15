@@ -278,6 +278,18 @@
   background: hsl(var(--muted-foreground));
 }
 
+/* ─── Share-as-image export container (off-screen, light theme) ─── */
+.share-image-export {
+  background: white;
+  color: #1e293b;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.share-image-export * {
+  box-sizing: border-box;
+  margin: 0;
+}
+
 /* ─── Print styles ─── */
 @media print {
   body {
