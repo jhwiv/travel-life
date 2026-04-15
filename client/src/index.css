@@ -278,6 +278,89 @@
   background: hsl(var(--muted-foreground));
 }
 
+/* ─── Print styles ─── */
+@media print {
+  body {
+    background: white !important;
+    color: #1e293b !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide navigation, sidebar, and non-print elements */
+  nav, aside, .sidebar, [data-sidebar], header,
+  .print\\:hidden, .no-print {
+    display: none !important;
+  }
+
+  /* Reset glass cards for print */
+  .glass-card {
+    background: white !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid #99f6e4 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  /* Clean typography */
+  * {
+    color-scheme: light;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #0f172a !important;
+  }
+
+  p, span, div {
+    break-inside: avoid;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 0.75in;
+    size: auto;
+  }
+
+  /* Force white backgrounds */
+  .min-h-screen, [style*="background: linear-gradient"] {
+    background: white !important;
+    min-height: auto !important;
+  }
+
+  /* Teal accent borders for visual interest */
+  .border-t, .border-b, hr {
+    border-color: #14b8a6 !important;
+  }
+
+  /* Bar chart colors stay visible */
+  .rounded-t[style*="background: linear-gradient"] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ensure content flows naturally */
+  .sticky {
+    position: static !important;
+  }
+
+  .overflow-y-auto, .overflow-x-auto {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* Animation classes should not affect print */
+  .animate-count-up,
+  .animate-page-enter,
+  .animate-arc,
+  .animate-dot-pulse,
+  .animate-plane-travel {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 @layer utilities {
   input[type='search']::-webkit-search-cancel-button {
     @apply hidden;
