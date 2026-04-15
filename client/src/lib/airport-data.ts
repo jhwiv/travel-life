@@ -106,7 +106,9 @@ export const AIRPORTS: Record<string, AirportInfo> = {
   "NCE": { name: "Nice Côte d'Azur", city: "Nice", country: "France", lat: 43.6584, lon: 7.2159 },
   "PMI": { name: "Palma de Mallorca", city: "Palma", country: "Spain", lat: 39.5517, lon: 2.7388 },
   "AGP": { name: "Málaga–Costa del Sol", city: "Málaga", country: "Spain", lat: 36.6749, lon: -4.4991 },
+  "ALC": { name: "Alicante–Elche Miguel Hernández", city: "Alicante", country: "Spain", lat: 38.2822, lon: -0.5582 },
   "TFS": { name: "Tenerife South", city: "Tenerife", country: "Spain", lat: 28.0445, lon: -16.5725 },
+  "KUN": { name: "Kaunas Airport", city: "Kaunas", country: "Lithuania", lat: 54.9639, lon: 24.0848 },
 
   // --- Middle East ---
   "DXB": { name: "Dubai International", city: "Dubai", country: "United Arab Emirates", lat: 25.2532, lon: 55.3657 },
