@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getTrips as getLocalTrips } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
 import FlightMap from "@/components/flight-map";
+import { getFlag } from "@/lib/country-flags";
 
 interface Analytics {
   totalTrips: number;
@@ -30,38 +31,6 @@ function formatDuration(minutes: number) {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
-}
-
-const countryFlags: Record<string, string> = {
-  "United States": "🇺🇸", "US": "🇺🇸", "USA": "🇺🇸",
-  "United Kingdom": "🇬🇧", "UK": "🇬🇧", "England": "🇬🇧",
-  "France": "🇫🇷", "Germany": "🇩🇪", "Italy": "🇮🇹", "Spain": "🇪🇸",
-  "Netherlands": "🇳🇱", "Belgium": "🇧🇪", "Switzerland": "🇨🇭",
-  "Austria": "🇦🇹", "Portugal": "🇵🇹", "Ireland": "🇮🇪",
-  "Sweden": "🇸🇪", "Norway": "🇳🇴", "Denmark": "🇩🇰", "Finland": "🇫🇮",
-  "Poland": "🇵🇱", "Czech Republic": "🇨🇿", "Czechia": "🇨🇿",
-  "Greece": "🇬🇷", "Turkey": "🇹🇷", "Japan": "🇯🇵",
-  "South Korea": "🇰🇷", "China": "🇨🇳", "India": "🇮🇳",
-  "Australia": "🇦🇺", "New Zealand": "🇳🇿", "Canada": "🇨🇦",
-  "Mexico": "🇲🇽", "Brazil": "🇧🇷", "Argentina": "🇦🇷",
-  "Colombia": "🇨🇴", "Chile": "🇨🇱", "Peru": "🇵🇪",
-  "Morocco": "🇲🇦", "Egypt": "🇪🇬", "South Africa": "🇿🇦",
-  "UAE": "🇦🇪", "United Arab Emirates": "🇦🇪", "Thailand": "🇹🇭",
-  "Singapore": "🇸🇬", "Malaysia": "🇲🇾", "Indonesia": "🇮🇩",
-  "Philippines": "🇵🇭", "Vietnam": "🇻🇳", "Taiwan": "🇹🇼",
-  "Hong Kong": "🇭🇰", "Iceland": "🇮🇸", "Hungary": "🇭🇺",
-  "Croatia": "🇭🇷", "Romania": "🇷🇴", "Luxembourg": "🇱🇺",
-  "Monaco": "🇲🇨", "Malta": "🇲🇹", "Cyprus": "🇨🇾",
-  "Dominican Republic": "🇩🇴", "Jamaica": "🇯🇲", "Costa Rica": "🇨🇷",
-  "Panama": "🇵🇦", "Puerto Rico": "🇵🇷", "Bahamas": "🇧🇸",
-  "Bermuda": "🇧🇲", "Aruba": "🇦🇼", "Barbados": "🇧🇧",
-  "St. Martin": "🇸🇽", "Cayman Islands": "🇰🇾", "Cuba": "🇨🇺",
-  "Israel": "🇮🇱", "Saudi Arabia": "🇸🇦", "Qatar": "🇶🇦",
-  "Scotland": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "Wales": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
-};
-
-function getFlag(country: string) {
-  return countryFlags[country] || "🏳️";
 }
 
 /** SVG decorative background pattern — dots grid */

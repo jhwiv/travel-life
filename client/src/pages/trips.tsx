@@ -217,9 +217,9 @@ export default function Trips() {
                       Flight
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#0F172A] border-teal-500/15 text-white">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
+                      <DialogTitle className="flex items-center gap-2 text-white">
                         <Plane className="w-5 h-5 text-teal-400" />
                         Add Flight
                       </DialogTitle>
@@ -235,9 +235,9 @@ export default function Trips() {
                       Train
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#0F172A] border-teal-500/15 text-white">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
+                      <DialogTitle className="flex items-center gap-2 text-white">
                         <TrainFront className="w-5 h-5 text-amber-400" />
                         Add Train Ride
                       </DialogTitle>

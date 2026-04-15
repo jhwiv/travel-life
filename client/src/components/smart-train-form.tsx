@@ -96,9 +96,9 @@ function OperatorInput({
 
   return (
     <div className="space-y-1.5 relative">
-      <Label className="text-xs font-medium text-muted-foreground">Train Operator</Label>
+      <Label className="text-xs font-medium text-white/50">Train Operator</Label>
       <div className="relative">
-        <TrainFront className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <TrainFront className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
         <Input
           ref={inputRef}
           value={inputValue}
@@ -112,31 +112,31 @@ function OperatorInput({
           }}
           placeholder='e.g. Amtrak, Eurostar, SNCF...'
           className={cn(
-            "pl-10 text-base h-12 rounded-xl border-2 transition-colors",
-            selectedCode ? "border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20" : "border-border"
+            "pl-10 text-base h-12 rounded-xl border-2 transition-colors bg-[#1E293B] text-white placeholder:text-white/20",
+            selectedCode ? "border-amber-500/40" : "border-white/10 focus:border-teal-500/50"
           )}
           autoFocus
         />
         {selectedCode && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">{selectedCode}</span>
-            <CheckCircle2 className="w-4 h-4 text-amber-500" />
+            <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-500/20 px-1.5 py-0.5 rounded">{selectedCode}</span>
+            <CheckCircle2 className="w-4 h-4 text-amber-400" />
           </div>
         )}
       </div>
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto"
+          className="absolute z-50 top-full mt-1 left-0 right-0 bg-[#1E293B] border border-white/10 rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto"
         >
           {suggestions.map((match) => (
             <button
               key={match.code}
               type="button"
-              className="w-full px-3 py-2.5 text-left hover:bg-accent flex items-center gap-3 text-sm transition-colors"
+              className="w-full px-3 py-2.5 text-left hover:bg-white/5 flex items-center gap-3 text-sm transition-colors text-white/80"
               onClick={() => selectOperator(match)}
             >
-              <span className="font-mono font-bold text-xs text-muted-foreground w-10">{match.code}</span>
+              <span className="font-mono font-bold text-xs text-white/40 w-10">{match.code}</span>
               <span className="truncate">{match.name}</span>
             </button>
           ))}
@@ -146,7 +146,7 @@ function OperatorInput({
   );
 }
 
-/* ─── Station autocomplete input (matching flight form's AirportCodeInput style) ─── */
+/* ─── Station autocomplete input ─── */
 function StationInput({
   label,
   value,
@@ -205,7 +205,7 @@ function StationInput({
 
   return (
     <div className="space-y-1.5 relative">
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+      <Label className="text-xs font-medium text-white/50">{label}</Label>
       <div className="relative">
         <Input
           ref={inputRef}
@@ -220,36 +220,36 @@ function StationInput({
           }}
           placeholder={placeholder}
           className={cn(
-            "text-base h-12 rounded-xl border-2 transition-colors",
-            stationInfo ? "border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border"
+            "text-base h-12 rounded-xl border-2 transition-colors bg-[#1E293B] text-white placeholder:text-white/20",
+            stationInfo ? "border-teal-500/40" : "border-white/10 focus:border-teal-500/50"
           )}
         />
         {stationInfo && (
-          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+          <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-400" />
         )}
       </div>
       {stationInfo && (
-        <div className="text-[11px] text-muted-foreground leading-tight">
-          <span className="font-medium text-foreground">{stationInfo.name}</span>
-          <span className="mx-1">·</span>
+        <div className="text-[11px] text-white/40 leading-tight">
+          <span className="font-medium text-white/70">{stationInfo.name}</span>
+          <span className="mx-1">&middot;</span>
           <span>{stationInfo.city}, {stationInfo.country}</span>
         </div>
       )}
       {showDropdown && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto"
+          className="absolute z-50 top-full mt-1 w-full bg-[#1E293B] border border-white/10 rounded-xl shadow-lg overflow-hidden max-h-60 overflow-y-auto"
         >
           {suggestions.map((station) => (
             <button
               key={`${station.code}-${station.name}`}
               type="button"
-              className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 text-sm transition-colors"
+              className="w-full px-3 py-2 text-left hover:bg-white/5 flex items-center gap-2 text-sm transition-colors text-white/80"
               onClick={() => selectStation(station)}
             >
               <span className="font-mono font-bold text-xs w-10">{station.code}</span>
-              <span className="truncate text-muted-foreground">
-                {station.name} · {station.city}, {station.country}
+              <span className="truncate text-white/40">
+                {station.name} &middot; {station.city}, {station.country}
               </span>
             </button>
           ))}
@@ -275,7 +275,6 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
 
   const trainNumRef = useRef<HTMLInputElement>(null);
 
-  // Progressive reveal: each section appears once the previous is filled
   const showTrainNum = !!operatorCode;
   const showStations = showTrainNum && trainNum.length >= 1;
   const showDate = showStations && !!departureStation && !!arrivalStation;
@@ -295,7 +294,6 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
   };
 
   const handleTrainNumChange = (raw: string) => {
-    // Allow alphanumeric for train numbers (e.g., "9024", "ICE575", "TGV6721")
     const cleaned = raw.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
     setTrainNum(cleaned);
   };
@@ -349,13 +347,13 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
         onClear={handleOperatorClear}
       />
 
-      {/* 2. Train Number (appears after operator selected) */}
+      {/* 2. Train Number */}
       {showTrainNum && (
         <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-          <Label className="text-xs font-medium text-muted-foreground">Train Number</Label>
+          <Label className="text-xs font-medium text-white/50">Train Number</Label>
           <div className="flex items-center gap-2">
-            <div className="flex items-center h-12 px-3 rounded-xl bg-muted/60 border-2 border-transparent shrink-0">
-              <span className="font-mono font-bold text-sm text-foreground">{operatorName.split(' ')[0]}</span>
+            <div className="flex items-center h-12 px-3 rounded-xl bg-white/5 border-2 border-transparent shrink-0">
+              <span className="font-mono font-bold text-sm text-white/70">{operatorName.split(' ')[0]}</span>
             </div>
             <Input
               ref={trainNumRef}
@@ -363,23 +361,23 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
               onChange={(e) => handleTrainNumChange(e.target.value)}
               placeholder="e.g. 9024"
               className={cn(
-                "font-mono text-lg tracking-wider h-12 rounded-xl border-2 transition-colors flex-1",
-                trainNum.length >= 1 ? "border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20" : "border-border"
+                "font-mono text-lg tracking-wider h-12 rounded-xl border-2 transition-colors flex-1 bg-[#1E293B] text-white placeholder:text-white/20",
+                trainNum.length >= 1 ? "border-amber-500/40" : "border-white/10 focus:border-teal-500/50"
               )}
             />
           </div>
           {trainNum && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 text-xs text-white/40">
               <span>Train</span>
-              <span className="font-mono font-bold text-foreground">{trainNum}</span>
-              <span>·</span>
+              <span className="font-mono font-bold text-white/70">{trainNum}</span>
+              <span>&middot;</span>
               <span>{operatorName}</span>
             </div>
           )}
         </div>
       )}
 
-      {/* 3. From / To stations (appears after train number entered) */}
+      {/* 3. From / To stations */}
       {showStations && (
         <div className="animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-2 gap-4">
@@ -399,17 +397,16 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
             />
           </div>
 
-          {/* Route summary when both stations set */}
           {departureStation && arrivalStation && (
-            <div className="mt-3 rounded-xl bg-muted/50 border border-border/60 px-4 py-3 flex items-center justify-between animate-in fade-in duration-200">
-              <div className="text-sm font-medium">
+            <div className="mt-3 rounded-xl bg-white/5 border border-white/10 px-4 py-3 flex items-center justify-between animate-in fade-in duration-200">
+              <div className="text-sm font-medium text-white">
                 {departureStation.city}
-                <span className="mx-2 text-muted-foreground">→</span>
+                <span className="mx-2 text-white/30">&rarr;</span>
                 {arrivalStation.city}
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 text-xs text-white/40">
                 <span className="font-mono">{departureCode}</span>
-                <span>→</span>
+                <span>&rarr;</span>
                 <span className="font-mono">{arrivalCode}</span>
               </div>
             </div>
@@ -417,18 +414,18 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
         </div>
       )}
 
-      {/* 4. Date (appears after stations filled) */}
+      {/* 4. Date */}
       {showDate && (
         <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-          <Label className="text-xs font-medium text-muted-foreground">Date</Label>
+          <Label className="text-xs font-medium text-white/50">Date</Label>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
               <Button
                 type="button"
                 variant="outline"
                 className={cn(
-                  "w-full h-12 rounded-xl border-2 justify-start text-left font-normal text-base transition-colors",
-                  date ? "border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20" : "border-border text-muted-foreground"
+                  "w-full h-12 rounded-xl border-2 justify-start text-left font-normal text-base transition-colors bg-[#1E293B] text-white",
+                  date ? "border-teal-500/40" : "border-white/10 text-white/30 hover:border-teal-500/30"
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
@@ -450,15 +447,15 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
         </div>
       )}
 
-      {/* 5. Notes (appears after date) */}
+      {/* 5. Notes */}
       {showNotes && (
         <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
-          <Label className="text-xs font-medium text-muted-foreground">Notes (optional)</Label>
+          <Label className="text-xs font-medium text-white/50">Notes (optional)</Label>
           <Input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Seat, class, platform..."
-            className="rounded-xl h-10"
+            className="rounded-xl h-10 border-2 border-white/10 focus:border-teal-500/50 bg-[#1E293B] text-white placeholder:text-white/20"
           />
         </div>
       )}
@@ -466,9 +463,12 @@ export function SmartTrainForm({ onSubmit, isPending }: SmartTrainFormProps) {
       {/* Submit */}
       <Button
         type="submit"
-        className="w-full h-12 rounded-xl text-base font-semibold"
+        className="w-full h-12 rounded-xl text-base font-bold"
         disabled={!isComplete || isPending}
-        style={{ background: isComplete ? "linear-gradient(135deg, #f59e0b, #d97706)" : undefined }}
+        style={{
+          background: isComplete ? "linear-gradient(135deg, #F59E0B, #D97706)" : undefined,
+          color: isComplete ? "#0F172A" : undefined,
+        }}
       >
         {isPending ? (
           <>

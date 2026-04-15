@@ -14,6 +14,7 @@ import { SmartFlightForm, type FlightFormData } from "@/components/smart-flight-
 import { SmartTrainForm, type TrainFormData } from "@/components/smart-train-form";
 import type { Trip } from "@shared/schema";
 import { getTrips, addTrip, computeAnalytics } from "@/lib/static-data";
+import { getFlag } from "@/lib/country-flags";
 
 interface Analytics {
   totalTrips: number;
@@ -24,24 +25,6 @@ interface Analytics {
   uniqueCities: number;
   uniqueCountries: number;
   countries: string[];
-}
-
-const countryFlags: Record<string, string> = {
-  "United States": "\u{1F1FA}\u{1F1F8}", US: "\u{1F1FA}\u{1F1F8}", USA: "\u{1F1FA}\u{1F1F8}",
-  "United Kingdom": "\u{1F1EC}\u{1F1E7}", UK: "\u{1F1EC}\u{1F1E7}", England: "\u{1F1EC}\u{1F1E7}",
-  France: "\u{1F1EB}\u{1F1F7}", Germany: "\u{1F1E9}\u{1F1EA}", Italy: "\u{1F1EE}\u{1F1F9}", Spain: "\u{1F1EA}\u{1F1F8}",
-  Netherlands: "\u{1F1F3}\u{1F1F1}", Belgium: "\u{1F1E7}\u{1F1EA}", Switzerland: "\u{1F1E8}\u{1F1ED}",
-  Austria: "\u{1F1E6}\u{1F1F9}", Portugal: "\u{1F1F5}\u{1F1F9}", Ireland: "\u{1F1EE}\u{1F1EA}",
-  Sweden: "\u{1F1F8}\u{1F1EA}", Norway: "\u{1F1F3}\u{1F1F4}", Denmark: "\u{1F1E9}\u{1F1F0}", Finland: "\u{1F1EB}\u{1F1EE}",
-  Poland: "\u{1F1F5}\u{1F1F1}", "Czech Republic": "\u{1F1E8}\u{1F1FF}", Czechia: "\u{1F1E8}\u{1F1FF}",
-  Greece: "\u{1F1EC}\u{1F1F7}", Turkey: "\u{1F1F9}\u{1F1F7}", Japan: "\u{1F1EF}\u{1F1F5}",
-  "South Korea": "\u{1F1F0}\u{1F1F7}", China: "\u{1F1E8}\u{1F1F3}", India: "\u{1F1EE}\u{1F1F3}",
-  Australia: "\u{1F1E6}\u{1F1FA}", Canada: "\u{1F1E8}\u{1F1E6}", Mexico: "\u{1F1F2}\u{1F1FD}",
-  Croatia: "\u{1F1ED}\u{1F1F7}", Aruba: "\u{1F1E6}\u{1F1FC}",
-};
-
-function getFlag(country: string) {
-  return countryFlags[country] || "\u{1F3F3}\u{FE0F}";
 }
 
 function formatDistance(miles: number) {

@@ -265,7 +265,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
     <div
       className={wrapperClasses}
       style={{
-        background: isBackground ? "transparent" : "linear-gradient(180deg, #0a0a2e 0%, #1a1040 50%, #0a0a2e 100%)",
+        background: isBackground ? "transparent" : "linear-gradient(180deg, #0F172A 0%, #0D2137 50%, #0F172A 100%)",
         ...heightStyle,
       }}
     >
@@ -277,13 +277,13 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
       >
         <defs>
           <pattern id="fm-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(139,92,246,0.035)" strokeWidth="0.5" />
+            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(20,184,166,0.035)" strokeWidth="0.5" />
           </pattern>
 
           <linearGradient id="fm-arc-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#a855f7" stopOpacity="0.9" />
-            <stop offset="50%" stopColor="#8b5cf6" stopOpacity="1" />
-            <stop offset="100%" stopColor="#c084fc" stopOpacity="0.8" />
+            <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.9" />
+            <stop offset="50%" stopColor="#14b8a6" stopOpacity="1" />
+            <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.8" />
           </linearGradient>
 
           <linearGradient id="fm-arc-recent" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -316,7 +316,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
         <rect width={VIEW_W} height={VIEW_H} fill="url(#fm-grid)" />
 
         {/* Coastline outlines */}
-        <g fill="none" stroke="rgba(139,92,246,0.12)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+        <g fill="none" stroke="rgba(20,184,166,0.12)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
           {COASTLINES.map((coast) => (
             <polyline
               key={coast.name}
@@ -335,12 +335,12 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
               <path
                 key={`glow-${i}`}
                 d={arc.path}
-                stroke={isRecent ? "#facc15" : "#8b5cf6"}
+                stroke={isRecent ? "#facc15" : "#14b8a6"}
                 strokeWidth={isHovered ? 12 : isRecent ? 9 : 6}
                 strokeOpacity={isHovered ? 0.45 : isRecent ? 0.3 : 0.15}
                 filter="url(#fm-glow)"
                 className="animate-passport-arc"
-                style={{ animationDelay: `${0.12 * i}s` }}
+                style={{ animationDelay: `${0.15 * i}s` }}
               />
             );
           })}
@@ -360,7 +360,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
                 strokeLinecap="round"
                 className="animate-passport-arc"
                 style={{
-                  animationDelay: `${0.12 * i}s`,
+                  animationDelay: `${0.15 * i}s`,
                   cursor: "pointer",
                   transition: "stroke-width 0.2s ease",
                 }}
@@ -392,11 +392,11 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
           const baseR = isHub ? 6 : Math.min(4 + ap.count * 0.5, 5.5);
           return (
             <g key={ap.code}>
-              <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#c084fc" : "#a78bfa"} fillOpacity="0.08">
+              <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.08" className="animate-dot-pulse">
                 <animate attributeName="r" values={`${baseR * 2.5};${baseR * 3.5};${baseR * 2.5}`} dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
                 <animate attributeName="fill-opacity" values="0.08;0.03;0.08" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
               </circle>
-              <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#c084fc" : "#a78bfa"} fillOpacity="0.95" filter="url(#fm-dot-glow)" />
+              <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.95" filter="url(#fm-dot-glow)" />
               <circle cx={ap.x} cy={ap.y} r={baseR * 0.3} fill="white" fillOpacity="0.9" />
             </g>
           );
@@ -426,7 +426,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
                   y1={ap.y}
                   x2={lx + (anchor === "end" ? -textW / 2 + 2 : anchor === "start" ? textW / 2 - 2 : 0)}
                   y2={ly - textH / 2 + 3}
-                  stroke="rgba(168,139,250,0.35)"
+                  stroke="rgba(20,184,166,0.35)"
                   strokeWidth="0.8"
                 />
               )}
@@ -438,13 +438,13 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
                 rx={4}
                 ry={4}
                 fill="rgba(10,10,46,0.8)"
-                stroke="rgba(139,92,246,0.2)"
+                stroke="rgba(20,184,166,0.2)"
                 strokeWidth="0.5"
               />
               <text
                 x={lx}
                 y={ly}
-                fill={isHub ? "#e9d5ff" : "rgba(255,255,255,0.9)"}
+                fill={isHub ? "#ccfbf1" : "rgba(255,255,255,0.9)"}
                 fontSize={fontSize}
                 fontWeight="600"
                 textAnchor={anchor}
@@ -461,8 +461,8 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
       {/* "FLIGHT MAP" badge */}
       {!isBackground && (
         <div className="absolute top-3 left-4 flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-purple-300/60 tracking-wider uppercase">
-            <span className="inline-block w-2 h-2 rounded-full bg-purple-400/80 animate-dot-pulse" />
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-teal-300/60 tracking-wider uppercase">
+            <span className="inline-block w-2 h-2 rounded-full bg-teal-400/80 animate-dot-pulse" />
             Flight Map
           </div>
           {mostRecent && (
@@ -494,15 +494,15 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
             bottom: "16px",
             transform: "translateX(-50%)",
             background: "rgba(10,10,46,0.95)",
-            border: "1px solid rgba(139,92,246,0.3)",
+            border: "1px solid rgba(20,184,166,0.3)",
             backdropFilter: "blur(8px)",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(139,92,246,0.15)",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(20,184,166,0.15)",
           }}
         >
           <div className="flex items-center gap-2 text-white/90">
-            <span className="text-purple-300 font-bold">{arcs[hoveredArc].depCode}</span>
+            <span className="text-teal-300 font-bold">{arcs[hoveredArc].depCode}</span>
             <span className="text-white/30">&rarr;</span>
-            <span className="text-purple-300 font-bold">{arcs[hoveredArc].arrCode}</span>
+            <span className="text-teal-300 font-bold">{arcs[hoveredArc].arrCode}</span>
             {arcs[hoveredArc].distance > 0 && (
               <span className="text-white/40 ml-1">{arcs[hoveredArc].distance.toLocaleString()} mi</span>
             )}

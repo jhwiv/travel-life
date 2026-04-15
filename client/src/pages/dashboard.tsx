@@ -14,6 +14,7 @@ import type { Trip } from "@shared/schema";
 import { Link } from "wouter";
 import { getTrips, computeAnalytics } from "@/lib/static-data";
 import FlightMap from "@/components/flight-map";
+import { getFlag } from "@/lib/country-flags";
 
 interface Analytics {
   totalTrips: number;
@@ -33,26 +34,6 @@ interface Analytics {
   flightDistance: number;
   trainDistance: number;
 }
-
-const countryFlags: Record<string, string> = {
-  "United States": "\u{1F1FA}\u{1F1F8}", US: "\u{1F1FA}\u{1F1F8}", USA: "\u{1F1FA}\u{1F1F8}",
-  "United Kingdom": "\u{1F1EC}\u{1F1E7}", UK: "\u{1F1EC}\u{1F1E7}", England: "\u{1F1EC}\u{1F1E7}",
-  France: "\u{1F1EB}\u{1F1F7}", Germany: "\u{1F1E9}\u{1F1EA}", Italy: "\u{1F1EE}\u{1F1F9}", Spain: "\u{1F1EA}\u{1F1F8}",
-  Netherlands: "\u{1F1F3}\u{1F1F1}", Belgium: "\u{1F1E7}\u{1F1EA}", Switzerland: "\u{1F1E8}\u{1F1ED}",
-  Austria: "\u{1F1E6}\u{1F1F9}", Portugal: "\u{1F1F5}\u{1F1F9}", Ireland: "\u{1F1EE}\u{1F1EA}",
-  Sweden: "\u{1F1F8}\u{1F1EA}", Norway: "\u{1F1F3}\u{1F1F4}", Denmark: "\u{1F1E9}\u{1F1F0}", Finland: "\u{1F1EB}\u{1F1EE}",
-  Japan: "\u{1F1EF}\u{1F1F5}", Canada: "\u{1F1E8}\u{1F1E6}", Mexico: "\u{1F1F2}\u{1F1FD}",
-  Croatia: "\u{1F1ED}\u{1F1F7}", Aruba: "\u{1F1E6}\u{1F1FC}",
-  "Dominican Republic": "\u{1F1E9}\u{1F1F4}", Jamaica: "\u{1F1EF}\u{1F1F2}",
-  Bahamas: "\u{1F1E7}\u{1F1F8}", Bermuda: "\u{1F1E7}\u{1F1F2}", "Puerto Rico": "\u{1F1F5}\u{1F1F7}",
-  "Costa Rica": "\u{1F1E8}\u{1F1F7}", Panama: "\u{1F1F5}\u{1F1E6}",
-  Greece: "\u{1F1EC}\u{1F1F7}", Turkey: "\u{1F1F9}\u{1F1F7}",
-  "Czech Republic": "\u{1F1E8}\u{1F1FF}", Czechia: "\u{1F1E8}\u{1F1FF}",
-  Poland: "\u{1F1F5}\u{1F1F1}", Hungary: "\u{1F1ED}\u{1F1FA}", Romania: "\u{1F1F7}\u{1F1F4}",
-  Iceland: "\u{1F1EE}\u{1F1F8}", Luxembourg: "\u{1F1F1}\u{1F1FA}",
-};
-
-function getFlag(c: string) { return countryFlags[c] || "\u{1F3F3}\u{FE0F}"; }
 
 function formatDuration(minutes: number) {
   const days = Math.floor(minutes / 1440);

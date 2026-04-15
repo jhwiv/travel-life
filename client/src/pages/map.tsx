@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { AIRPORTS } from "@/lib/airport-data";
 import { getTrips, computeAnalytics } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
+import { getFlag } from "@/lib/country-flags";
 
 /* ─── Fitted Bounding Box Projection ─── */
 const VIEW_W = 960;
@@ -251,24 +252,6 @@ const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string; le
   ZRH: { dx: 16, dy: 20, anchor: "start" },
 };
 
-const countryFlags: Record<string, string> = {
-  "United States": "\u{1F1FA}\u{1F1F8}", US: "\u{1F1FA}\u{1F1F8}", USA: "\u{1F1FA}\u{1F1F8}",
-  "United Kingdom": "\u{1F1EC}\u{1F1E7}", UK: "\u{1F1EC}\u{1F1E7}",
-  France: "\u{1F1EB}\u{1F1F7}", Germany: "\u{1F1E9}\u{1F1EA}", Italy: "\u{1F1EE}\u{1F1F9}", Spain: "\u{1F1EA}\u{1F1F8}",
-  Netherlands: "\u{1F1F3}\u{1F1F1}", Belgium: "\u{1F1E7}\u{1F1EA}", Switzerland: "\u{1F1E8}\u{1F1ED}",
-  Austria: "\u{1F1E6}\u{1F1F9}", Portugal: "\u{1F1F5}\u{1F1F9}", Ireland: "\u{1F1EE}\u{1F1EA}",
-  Sweden: "\u{1F1F8}\u{1F1EA}", Norway: "\u{1F1F3}\u{1F1F4}", Denmark: "\u{1F1E9}\u{1F1F0}", Finland: "\u{1F1EB}\u{1F1EE}",
-  Japan: "\u{1F1EF}\u{1F1F5}", Canada: "\u{1F1E8}\u{1F1E6}", Mexico: "\u{1F1F2}\u{1F1FD}",
-  Croatia: "\u{1F1ED}\u{1F1F7}", Aruba: "\u{1F1E6}\u{1F1FC}",
-  Greece: "\u{1F1EC}\u{1F1F7}", Turkey: "\u{1F1F9}\u{1F1F7}",
-  "Czech Republic": "\u{1F1E8}\u{1F1FF}", Czechia: "\u{1F1E8}\u{1F1FF}",
-  Poland: "\u{1F1F5}\u{1F1F1}", Hungary: "\u{1F1ED}\u{1F1FA}",
-  Iceland: "\u{1F1EE}\u{1F1F8}", Australia: "\u{1F1E6}\u{1F1FA}",
-  "South Korea": "\u{1F1F0}\u{1F1F7}", China: "\u{1F1E8}\u{1F1F3}", India: "\u{1F1EE}\u{1F1F3}",
-};
-
-function getFlag(c: string) { return countryFlags[c] || "\u{1F3F3}\u{FE0F}"; }
-
 function formatDistance(miles: number) {
   return miles.toLocaleString();
 }
@@ -392,7 +375,7 @@ export default function MapPage() {
   const uniqueCountries = analytics.uniqueCountries || 0;
 
   return (
-    <div className="min-h-screen animate-page-enter" style={{ background: "linear-gradient(180deg, #0a0a2e 0%, #1a1040 30%, #0d0d30 60%, #08081e 100%)" }}>
+    <div className="min-h-screen animate-page-enter" style={{ background: "linear-gradient(180deg, #0F172A 0%, #0D2137 30%, #0B1929 60%, #091018 100%)" }}>
       {/* Full-width fitted map */}
       <div className="relative w-full" style={{ height: "min(56vh, 560px)" }}>
         <svg
@@ -404,9 +387,9 @@ export default function MapPage() {
           <defs>
             {/* Arc glow gradient — purple/violet */}
             <linearGradient id="pp-arc-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#a855f7" stopOpacity="0.9" />
-              <stop offset="50%" stopColor="#8b5cf6" stopOpacity="1" />
-              <stop offset="100%" stopColor="#c084fc" stopOpacity="0.8" />
+              <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#14b8a6" stopOpacity="1" />
+              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.8" />
             </linearGradient>
 
             {/* Gold gradient for most recent arc */}
@@ -434,7 +417,7 @@ export default function MapPage() {
 
             {/* Label background filter — subtle dark pill */}
             <filter id="pp-label-bg" x="-0.15" y="-0.1" width="1.3" height="1.3">
-              <feFlood floodColor="#0a0a2e" floodOpacity="0.75" result="bg" />
+              <feFlood floodColor="#0F172A" floodOpacity="0.75" result="bg" />
               <feMerge>
                 <feMergeNode in="bg" />
                 <feMergeNode in="SourceGraphic" />
@@ -449,12 +432,12 @@ export default function MapPage() {
 
           {/* Subtle grid pattern */}
           <pattern id="pp-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(139,92,246,0.035)" strokeWidth="0.5" />
+            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(20,184,166,0.035)" strokeWidth="0.5" />
           </pattern>
           <rect width={VIEW_W} height={VIEW_H} fill="url(#pp-grid)" />
 
           {/* Continent outlines — subtle, just slightly lighter than background */}
-          <g fill="none" stroke="rgba(139,92,246,0.12)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          <g fill="none" stroke="rgba(20,184,166,0.12)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
             {COASTLINES.map((coast) => (
               <polyline
                 key={coast.name}
@@ -473,12 +456,12 @@ export default function MapPage() {
                 <path
                   key={`glow-${i}`}
                   d={arc.path}
-                  stroke={isRecent ? "#facc15" : "#8b5cf6"}
+                  stroke={isRecent ? "#facc15" : "#14b8a6"}
                   strokeWidth={isHovered ? 12 : isRecent ? 9 : 6}
                   strokeOpacity={isHovered ? 0.45 : isRecent ? 0.3 : 0.15}
                   filter="url(#pp-glow)"
                   className="animate-passport-arc"
-                  style={{ animationDelay: `${0.12 * i}s` }}
+                  style={{ animationDelay: `${0.15 * i}s` }}
                 />
               );
             })}
@@ -498,7 +481,7 @@ export default function MapPage() {
                   strokeLinecap="round"
                   className="animate-passport-arc"
                   style={{
-                    animationDelay: `${0.12 * i}s`,
+                    animationDelay: `${0.15 * i}s`,
                     cursor: "pointer",
                     transition: "stroke-width 0.2s ease",
                   }}
@@ -531,12 +514,12 @@ export default function MapPage() {
             return (
               <g key={ap.code}>
                 {/* Outer pulse ring */}
-                <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#c084fc" : "#a78bfa"} fillOpacity="0.08">
+                <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.08" className="animate-dot-pulse">
                   <animate attributeName="r" values={`${baseR * 2.5};${baseR * 3.5};${baseR * 2.5}`} dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
                   <animate attributeName="fill-opacity" values="0.08;0.03;0.08" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
                 </circle>
                 {/* Inner solid dot */}
-                <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#c084fc" : "#a78bfa"} fillOpacity="0.95" filter="url(#pp-dot-glow)" />
+                <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.95" filter="url(#pp-dot-glow)" />
                 {/* White center */}
                 <circle cx={ap.x} cy={ap.y} r={baseR * 0.3} fill="white" fillOpacity="0.9" />
               </g>
@@ -568,7 +551,7 @@ export default function MapPage() {
                     y1={ap.y}
                     x2={lx + (anchor === "end" ? -textW / 2 + 2 : anchor === "start" ? textW / 2 - 2 : 0)}
                     y2={ly - textH / 2 + 3}
-                    stroke="rgba(168,139,250,0.35)"
+                    stroke="rgba(20,184,166,0.35)"
                     strokeWidth="0.8"
                   />
                 )}
@@ -581,14 +564,14 @@ export default function MapPage() {
                   rx={4}
                   ry={4}
                   fill="rgba(10,10,46,0.8)"
-                  stroke="rgba(139,92,246,0.2)"
+                  stroke="rgba(20,184,166,0.2)"
                   strokeWidth="0.5"
                 />
                 {/* Label text */}
                 <text
                   x={lx}
                   y={ly}
-                  fill={isHub ? "#e9d5ff" : "rgba(255,255,255,0.9)"}
+                  fill={isHub ? "#ccfbf1" : "rgba(255,255,255,0.9)"}
                   fontSize={fontSize}
                   fontWeight="600"
                   textAnchor={anchor}
@@ -611,15 +594,15 @@ export default function MapPage() {
               bottom: "16px",
               transform: "translateX(-50%)",
               background: "rgba(10,10,46,0.95)",
-              border: "1px solid rgba(139,92,246,0.3)",
+              border: "1px solid rgba(20,184,166,0.3)",
               backdropFilter: "blur(8px)",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(139,92,246,0.15)",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(20,184,166,0.15)",
             }}
           >
             <div className="flex items-center gap-2 text-white/90">
-              <span className="text-purple-300 font-bold">{arcs[hoveredArc].depCode}</span>
+              <span className="text-teal-300 font-bold">{arcs[hoveredArc].depCode}</span>
               <span className="text-white/30">&rarr;</span>
-              <span className="text-purple-300 font-bold">{arcs[hoveredArc].arrCode}</span>
+              <span className="text-teal-300 font-bold">{arcs[hoveredArc].arrCode}</span>
               {arcs[hoveredArc].distance > 0 && (
                 <span className="text-white/40 ml-1">{arcs[hoveredArc].distance.toLocaleString()} mi</span>
               )}
@@ -632,7 +615,7 @@ export default function MapPage() {
         )}
 
         {/* Bottom gradient fade into stats section */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent 0%, #0d0d30 100%)" }} />
+        <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent 0%, #0B1929 100%)" }} />
       </div>
 
       {/* Stats section below the map */}
@@ -650,11 +633,11 @@ export default function MapPage() {
 
         {/* Section title with divider */}
         <div className="text-center mb-8">
-          <div className="h-px mx-auto w-32 mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)" }} />
-          <h2 className="text-lg font-extrabold tracking-[0.2em] uppercase font-display" style={{ color: "#e9d5ff" }}>
+          <div className="h-px mx-auto w-32 mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.3), transparent)" }} />
+          <h2 className="text-lg font-extrabold tracking-[0.2em] uppercase font-display" style={{ color: "#ccfbf1" }}>
             My Travel Passport
           </h2>
-          <div className="h-px mx-auto w-32 mt-4" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)" }} />
+          <div className="h-px mx-auto w-32 mt-4" style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.3), transparent)" }} />
         </div>
 
         {/* Stats grid — 3x2 layout, no orphaned stats */}
@@ -664,20 +647,20 @@ export default function MapPage() {
             <p className="text-4xl font-extrabold text-white tabular-nums font-display leading-none">
               <AnimatedStat value={totalFlights} />
             </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(196,181,253,0.5)" }}>Flights</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(153,246,228,0.5)" }}>Flights</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-extrabold text-white tabular-nums font-display leading-none">
               {formatDistance(totalDistance)}
-              <span className="text-base font-semibold ml-1" style={{ color: "rgba(196,181,253,0.5)" }}>mi</span>
+              <span className="text-base font-semibold ml-1" style={{ color: "rgba(153,246,228,0.5)" }}>mi</span>
             </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(196,181,253,0.5)" }}>Distance</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(153,246,228,0.5)" }}>Distance</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-extrabold text-white tabular-nums font-display leading-none">
               {formatDuration(totalDuration)}
             </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(196,181,253,0.5)" }}>Flight Time</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(153,246,228,0.5)" }}>Flight Time</p>
           </div>
 
           {/* Row 2 */}
@@ -685,41 +668,41 @@ export default function MapPage() {
             <p className="text-4xl font-extrabold text-white tabular-nums font-display leading-none">
               <AnimatedStat value={uniqueAirports} />
             </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(196,181,253,0.5)" }}>Airports</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(153,246,228,0.5)" }}>Airports</p>
           </div>
           <div className="text-center">
             <p className="text-4xl font-extrabold text-white tabular-nums font-display leading-none">
               <AnimatedStat value={uniqueAirlines} />
             </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(196,181,253,0.5)" }}>Airlines</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(153,246,228,0.5)" }}>Airlines</p>
           </div>
           <div className="text-center">
             <p className="text-4xl font-extrabold text-white tabular-nums font-display leading-none">
               <AnimatedStat value={uniqueCountries} />
             </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(196,181,253,0.5)" }}>Countries</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] mt-2 font-medium" style={{ color: "rgba(153,246,228,0.5)" }}>Countries</p>
           </div>
         </div>
 
         {/* Earth circumference comparison */}
         {totalDistance > 0 && (
-          <div className="rounded-2xl p-5 mb-6" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.1)" }}>
+          <div className="rounded-2xl p-5 mb-6" style={{ background: "rgba(20,184,166,0.06)", border: "1px solid rgba(20,184,166,0.1)" }}>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-lg">🌍</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: "rgba(196,181,253,0.4)" }}>Around the Earth</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: "rgba(153,246,228,0.4)" }}>Around the Earth</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "rgba(139,92,246,0.1)" }}>
+              <div className="flex-1 h-3 rounded-full overflow-hidden" style={{ background: "rgba(20,184,166,0.1)" }}>
                 <div className="h-full rounded-full transition-all duration-1000" style={{
                   width: `${Math.min((totalDistance / 24901) * 100, 100)}%`,
-                  background: "linear-gradient(90deg, #7c3aed, #a855f7, #facc15)",
+                  background: "linear-gradient(90deg, #0d9488, #14b8a6, #facc15)",
                 }} />
               </div>
               <span className="text-sm font-bold text-white tabular-nums font-display">
                 {((totalDistance / 24901) * 100).toFixed(0)}%
               </span>
             </div>
-            <p className="text-[10px] mt-1.5" style={{ color: "rgba(196,181,253,0.3)" }}>
+            <p className="text-[10px] mt-1.5" style={{ color: "rgba(153,246,228,0.3)" }}>
               {formatDistance(totalDistance)} of 24,901 miles
             </p>
           </div>
@@ -727,8 +710,8 @@ export default function MapPage() {
 
         {/* Footer */}
         <div className="text-center pt-6">
-          <div className="h-px mx-auto w-32 mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.15), transparent)" }} />
-          <p className="text-[8px] font-mono tracking-[0.3em] uppercase" style={{ color: "rgba(196,181,253,0.15)" }}>
+          <div className="h-px mx-auto w-32 mb-4" style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.15), transparent)" }} />
+          <p className="text-[8px] font-mono tracking-[0.3em] uppercase" style={{ color: "rgba(153,246,228,0.15)" }}>
             Travel Life &middot; grandloopstudio.com
           </p>
         </div>
