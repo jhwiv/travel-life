@@ -95,6 +95,32 @@
   }
 }
 
+/* ─── Mobile modal keyboard-safe layout ─── */
+@media (max-width: 639px) {
+  /* On mobile, make the dialog fill the dynamic viewport height.
+     dvh shrinks automatically when the iOS/Android keyboard opens,
+     keeping the entire modal visible and scrollable. */
+  .dialog-content {
+    height: 100dvh;
+    height: 100svh; /* fallback for older browsers */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+    border-radius: 0;
+  }
+
+  /* Override desktop centered-zoom animation with a simple slide-up on mobile */
+  .dialog-content[data-state="open"] {
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 100%;
+    --tw-enter-scale: 1;
+  }
+  .dialog-content[data-state="closed"] {
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 100%;
+    --tw-exit-scale: 1;
+  }
+}
+
 /* Number formatting for data displays */
 .tabular-nums {
   font-variant-numeric: tabular-nums lining-nums;

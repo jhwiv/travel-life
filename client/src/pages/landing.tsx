@@ -78,7 +78,7 @@ function AddTrainDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdde
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto bg-[#0F172A] border-teal-500/15 text-white">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <TrainFront className="w-5 h-5 text-amber-400" />
@@ -106,7 +106,7 @@ function AddFlightDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdd
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto bg-[#0F172A] border-teal-500/15 text-white">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <Plane className="w-5 h-5 text-teal-400" />
