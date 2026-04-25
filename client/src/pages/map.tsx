@@ -4,10 +4,52 @@ import { getTrips, computeAnalytics } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
 import { getFlag } from "@/lib/country-flags";
 import { CalendarDays, MapPin, Plane, Route } from "lucide-react";
+import { geoPath } from "d3-geo";
+import { feature } from "topojson-client";
+import worldAtlas from "world-atlas/countries-110m.json";
 
 /* ─── Fitted Bounding Box Projection ─── */
 const VIEW_W = 960;
 const VIEW_H = 580;
+
+type Point = { x: number; y: number };
+type CountryFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>;
+
+const WORLD_COUNTRIES = (
+  feature(
+    worldAtlas as any,
+    (worldAtlas as any).objects.countries,
+  ) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>
+).features;
+
+const COUNTRY_NAME_ALIASES: Record<string, string> = {
+  "United Kingdom": "United Kingdom",
+  "United States": "United States of America",
+  USA: "United States of America",
+  "U.S.": "United States of America",
+  "U.K.": "United Kingdom",
+};
+
+const FEATURE_NAME_ALIASES: Record<string, string> = {
+  "United States of America": "United States",
+};
+
+function normalizeCountryName(name: string) {
+  return COUNTRY_NAME_ALIASES[name] || name;
+}
+
+const COUNTRY_LABEL_POINTS: Record<string, { lat: number; lon: number; label?: string }> = {
+  "United Kingdom": { lat: 54.4, lon: -2.7, label: "United Kingdom" },
+  France: { lat: 46.6, lon: 2.4 },
+  Netherlands: { lat: 52.2, lon: 5.3 },
+  Denmark: { lat: 56.0, lon: 10.0 },
+  Germany: { lat: 51.1, lon: 10.4 },
+  Switzerland: { lat: 46.8, lon: 8.2 },
+  Spain: { lat: 40.2, lon: -3.5 },
+  Portugal: { lat: 39.6, lon: -8.0 },
+  Italy: { lat: 42.8, lon: 12.5 },
+  Greece: { lat: 39.1, lon: 22.8 },
+};
 
 /**
  * Compute a fitted Mercator projection that zooms to the user's actual airports.
@@ -21,11 +63,29 @@ function createFittedProjection(airportCodes: string[]) {
 
   if (coords.length === 0) {
     // fallback: whole world
+    const project = (lat: number, lon: number): Point => ({
+      x: ((lon + 180) / 360) * VIEW_W,
+      y: (1 - (lat + 60) / 140) * VIEW_H,
+    });
+    const projection = {
+      stream(stream: any) {
+        return {
+          point(lon: number, lat: number) {
+            const { x, y } = project(lat, lon);
+            stream.point(x, y);
+          },
+          lineStart() { stream.lineStart(); },
+          lineEnd() { stream.lineEnd(); },
+          polygonStart() { stream.polygonStart(); },
+          polygonEnd() { stream.polygonEnd(); },
+          sphere() { stream.sphere(); },
+        };
+      },
+    };
+
     return {
-      project: (lat: number, lon: number) => ({
-        x: ((lon + 180) / 360) * VIEW_W,
-        y: (1 - (lat + 60) / 140) * VIEW_H,
-      }),
+      project,
+      path: geoPath(projection as any),
       bounds: { minLon: -180, maxLon: 180, minLat: -60, maxLat: 80 },
     };
   }
@@ -63,7 +123,7 @@ function createFittedProjection(airportCodes: string[]) {
 
   const PAD = 50; // pixel padding inside SVG
 
-  function project(lat: number, lon: number) {
+  function project(lat: number, lon: number): Point {
     const x = PAD + ((lon - minLon) / (maxLon - minLon)) * (VIEW_W - PAD * 2);
     const my = mercY(lat);
     const yNorm = (my - yMin) / (yMax - yMin);
@@ -71,7 +131,33 @@ function createFittedProjection(airportCodes: string[]) {
     return { x, y };
   }
 
-  return { project, bounds: { minLon, maxLon, minLat, maxLat } };
+  const projection = {
+    stream(stream: any) {
+      return {
+        point(lon: number, lat: number) {
+          const { x, y } = project(lat, lon);
+          stream.point(x, y);
+        },
+        lineStart() {
+          stream.lineStart();
+        },
+        lineEnd() {
+          stream.lineEnd();
+        },
+        polygonStart() {
+          stream.polygonStart();
+        },
+        polygonEnd() {
+          stream.polygonEnd();
+        },
+        sphere() {
+          stream.sphere();
+        },
+      };
+    },
+  };
+
+  return { project, path: geoPath(projection as any), bounds: { minLon, maxLon, minLat, maxLat } };
 }
 
 function arcPath(x1: number, y1: number, x2: number, y2: number): string {
@@ -88,13 +174,8 @@ function arcPath(x1: number, y1: number, x2: number, y2: number): string {
   return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
 }
 
-/* ─── Simplified continent outlines ─── */
-/* These are simplified geographic outlines projected via Mercator.
-   We draw them at absolute lat/lon and project them via the fitted projection. */
-
+/* ─── Legacy simplified coastline data retained as a fallback reference only ─── */
 interface CoastPoint { lat: number; lon: number }
-
-// Simplified coastline data (key outlines for the Atlantic region)
 const COASTLINES: { name: string; points: CoastPoint[] }[] = [
   // US East Coast (simplified)
   { name: "us-east", points: [
@@ -338,8 +419,17 @@ export default function MapPage() {
   const trips = getTrips() as unknown as Trip[];
   const analytics = computeAnalytics();
 
-  const { airports, arcs, mostRecent, projection, mapLabels } = useMemo(() => {
+  const { airports, arcs, mostRecent, projection, mapLabels, countryShapes, countryLabels } = useMemo(() => {
     const flights = trips.filter((t: any) => t.type === "flight" && t.status === "completed");
+    const completedTrips = trips.filter((t: any) => t.status === "completed");
+    const traveledCountries = new Set<string>();
+
+    completedTrips.forEach((t: any) => {
+      const depCountry = t.departureCountry || t.departure_country;
+      const arrCountry = t.arrivalCountry || t.arrival_country;
+      if (depCountry) traveledCountries.add(normalizeCountryName(depCountry));
+      if (arrCountry) traveledCountries.add(normalizeCountryName(arrCountry));
+    });
 
     // Collect all airport codes first for bounding box
     const allCodes = new Set<string>();
@@ -405,12 +495,47 @@ export default function MapPage() {
       return { ...label, ...point };
     }).filter((label) => label.x > 12 && label.x < VIEW_W - 12 && label.y > 12 && label.y < VIEW_H - 12);
 
+    const shapes = WORLD_COUNTRIES.map((country: CountryFeature) => {
+      const path = proj.path(country);
+      if (!path) return null;
+      const [[x0, y0], [x1, y1]] = proj.path.bounds(country);
+      const visible = x1 >= -80 && x0 <= VIEW_W + 80 && y1 >= -80 && y0 <= VIEW_H + 80;
+      if (!visible) return null;
+
+      const rawName = country.properties?.name || "";
+      const displayName = FEATURE_NAME_ALIASES[rawName] || rawName;
+      const highlight = traveledCountries.has(rawName) || traveledCountries.has(displayName);
+
+      return {
+        id: rawName,
+        name: displayName,
+        path,
+        highlight,
+      };
+    }).filter(Boolean) as { id: string; name: string; path: string; highlight: boolean }[];
+
+    const labels = Array.from(traveledCountries)
+      .map((countryName) => {
+        const labelPoint = COUNTRY_LABEL_POINTS[countryName];
+        if (!labelPoint) return null;
+        const point = proj.project(labelPoint.lat, labelPoint.lon);
+        if (point.x < 16 || point.x > VIEW_W - 16 || point.y < 16 || point.y > VIEW_H - 16) return null;
+        return {
+          name: labelPoint.label || countryName,
+          x: point.x,
+          y: point.y,
+        };
+      })
+      .filter(Boolean) as { name: string; x: number; y: number }[];
+
     return {
       airports: Array.from(airportMap.values()),
       arcs: arcList,
       mostRecent: mostRecentArc,
       projection: proj,
       mapLabels: labelList,
+      countryShapes: shapes,
+      countryLabels: labels,
     };
   }, [trips]);
 
@@ -517,21 +642,19 @@ export default function MapPage() {
           </pattern>
           <rect width={VIEW_W} height={VIEW_H} fill="url(#pp-grid)" />
 
-          {/* Land masses and coastlines — more visible than the old wireframe map */}
-          <g stroke="rgba(226,232,240,0.28)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
-            {COASTLINES.map((coast) => (
-              <polyline
-                key={coast.name}
-                points={coastToSvgPoints(coast.points, projection.project)}
-                fill={
-                  coast.points.length > 2 &&
-                  Math.abs(coast.points[0].lat - coast.points[coast.points.length - 1].lat) < 1 &&
-                  Math.abs(coast.points[0].lon - coast.points[coast.points.length - 1].lon) < 1
-                    ? "url(#pp-land)"
-                    : "none"
-                }
-                fillOpacity="0.72"
-              />
+          {/* Accurate country polygons from Natural Earth / world-atlas */}
+          <g strokeLinecap="round" strokeLinejoin="round">
+            {countryShapes.map((country) => (
+              <path
+                key={country.id}
+                d={country.path}
+                fill={country.highlight ? "url(#pp-land)" : "rgba(51,85,75,0.58)"}
+                stroke={country.highlight ? "rgba(254,243,199,0.68)" : "rgba(203,213,225,0.24)"}
+                strokeWidth={country.highlight ? 1.15 : 0.55}
+                opacity={country.highlight ? 0.96 : 0.62}
+              >
+                <title>{country.name}</title>
+              </path>
             ))}
           </g>
           <rect width={VIEW_W} height={VIEW_H} fill="url(#pp-land-highlight)" opacity="0.55" />
@@ -561,6 +684,29 @@ export default function MapPage() {
                 </text>
               );
             })}
+          </g>
+
+          {/* Traveled country labels */}
+          <g pointerEvents="none">
+            {countryLabels.map((label) => (
+              <text
+                key={`country-${label.name}`}
+                x={label.x}
+                y={label.y}
+                textAnchor="middle"
+                fontFamily="'Satoshi', 'General Sans', 'Inter', ui-sans-serif, sans-serif"
+                fontSize={12}
+                fontWeight={850}
+                letterSpacing="0.08em"
+                fill="rgba(254,243,199,0.86)"
+                stroke="rgba(2,6,23,0.86)"
+                strokeWidth={3}
+                paintOrder="stroke"
+                opacity={0.88}
+              >
+                {label.name.toUpperCase()}
+              </text>
+            ))}
           </g>
 
           {/* Arc glow layer (behind) */}
