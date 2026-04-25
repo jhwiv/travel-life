@@ -392,10 +392,7 @@ export default function FlightMap({ trips, variant = "hero", className = "" }: F
           const baseR = isHub ? 6 : Math.min(4 + ap.count * 0.5, 5.5);
           return (
             <g key={ap.code}>
-              <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.08" className="animate-dot-pulse">
-                <animate attributeName="r" values={`${baseR * 2.5};${baseR * 3.5};${baseR * 2.5}`} dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
-                <animate attributeName="fill-opacity" values="0.08;0.03;0.08" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
-              </circle>
+              <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.07" />
               <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.95" filter="url(#fm-dot-glow)" />
               <circle cx={ap.x} cy={ap.y} r={baseR * 0.3} fill="white" fillOpacity="0.9" />
             </g>

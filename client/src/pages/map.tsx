@@ -775,11 +775,8 @@ export default function MapPage() {
             const baseR = isHub ? 7 : Math.min(4.6 + ap.count * 0.55, 6.3);
             return (
               <g key={ap.code}>
-                {/* Outer pulse ring */}
-                <circle cx={ap.x} cy={ap.y} r={baseR * 2.7} fill={isHub ? "#e0f2fe" : "#bae6fd"} fillOpacity="0.16" className="animate-dot-pulse">
-                  <animate attributeName="r" values={`${baseR * 2.5};${baseR * 3.5};${baseR * 2.5}`} dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
-                  <animate attributeName="fill-opacity" values="0.16;0.05;0.16" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
-                </circle>
+                {/* Static glow ring */}
+                <circle cx={ap.x} cy={ap.y} r={baseR * 2.7} fill={isHub ? "#e0f2fe" : "#bae6fd"} fillOpacity="0.12" />
                 {/* Inner solid dot */}
                 <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#7dd3fc" : "#e0f2fe"} fillOpacity="0.98" filter="url(#pp-dot-glow)" />
                 {/* White center */}
