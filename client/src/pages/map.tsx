@@ -3,6 +3,7 @@ import { AIRPORTS } from "@/lib/airport-data";
 import { getTrips, computeAnalytics } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
 import { getFlag } from "@/lib/country-flags";
+import { CalendarDays, MapPin, Plane, Route } from "lucide-react";
 
 /* ─── Fitted Bounding Box Projection ─── */
 const VIEW_W = 960;
@@ -243,6 +244,14 @@ function coastToSvgPoints(
 /* Label offsets — very aggressive for Florida cluster separation */
 const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string; leaderLine?: boolean }> = {
   EWR: { dx: -22, dy: -12, anchor: "end" },
+  LHR: { dx: -76, dy: -24, anchor: "end", leaderLine: true },
+  CDG: { dx: 24, dy: 28, anchor: "start", leaderLine: true },
+  AMS: { dx: 16, dy: -30, anchor: "start", leaderLine: true },
+  BCN: { dx: -54, dy: 32, anchor: "end", leaderLine: true },
+  FCO: { dx: 24, dy: 34, anchor: "start", leaderLine: true },
+  MUC: { dx: 20, dy: -22, anchor: "start", leaderLine: true },
+  LIS: { dx: -18, dy: 30, anchor: "end", leaderLine: true },
+  ATH: { dx: 20, dy: 24, anchor: "start", leaderLine: true },
   SRQ: { dx: -100, dy: -55, anchor: "end", leaderLine: true },
   RSW: { dx: -100, dy: 0, anchor: "end", leaderLine: true },
   PBI: { dx: 80, dy: -50, anchor: "start", leaderLine: true },
@@ -251,6 +260,23 @@ const LABEL_OFFSETS: Record<string, { dx: number; dy: number; anchor: string; le
   CPH: { dx: 16, dy: -16, anchor: "start" },
   ZRH: { dx: 16, dy: 20, anchor: "start" },
 };
+
+const MAP_CITY_LABELS = [
+  { label: "London", lat: 51.5072, lon: -0.1276, scale: "major" },
+  { label: "Paris", lat: 48.8566, lon: 2.3522, scale: "major" },
+  { label: "Amsterdam", lat: 52.3676, lon: 4.9041, scale: "minor" },
+  { label: "Copenhagen", lat: 55.6761, lon: 12.5683, scale: "minor" },
+  { label: "Munich", lat: 48.1351, lon: 11.582, scale: "minor" },
+  { label: "Zurich", lat: 47.3769, lon: 8.5417, scale: "minor" },
+  { label: "Milan", lat: 45.4642, lon: 9.19, scale: "minor" },
+  { label: "Barcelona", lat: 41.3874, lon: 2.1686, scale: "minor" },
+  { label: "Lisbon", lat: 38.7223, lon: -9.1393, scale: "minor" },
+  { label: "Rome", lat: 41.9028, lon: 12.4964, scale: "minor" },
+  { label: "Athens", lat: 37.9838, lon: 23.7275, scale: "minor" },
+  { label: "North Sea", lat: 56.2, lon: 2.2, scale: "water" },
+  { label: "Mediterranean Sea", lat: 38.0, lon: 10.0, scale: "water" },
+  { label: "Atlantic Ocean", lat: 45.0, lon: -15.0, scale: "water" },
+] as const;
 
 function formatDistance(miles: number) {
   return miles.toLocaleString();
@@ -261,6 +287,23 @@ function formatDuration(minutes: number) {
   const hours = Math.floor((minutes % 1440) / 60);
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h ${minutes % 60}m`;
+}
+
+function formatDate(dateString: string) {
+  if (!dateString) return "";
+  return new Date(`${dateString}T12:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatShortDate(dateString: string) {
+  if (!dateString) return "";
+  return new Date(`${dateString}T12:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 /** Animated count-up */
@@ -295,7 +338,7 @@ export default function MapPage() {
   const trips = getTrips() as unknown as Trip[];
   const analytics = computeAnalytics();
 
-  const { airports, arcs, mostRecent, projection } = useMemo(() => {
+  const { airports, arcs, mostRecent, projection, mapLabels } = useMemo(() => {
     const flights = trips.filter((t: any) => t.type === "flight" && t.status === "completed");
 
     // Collect all airport codes first for bounding box
@@ -357,12 +400,17 @@ export default function MapPage() {
 
     const sorted = [...arcList].sort((a: any, b: any) => a.date.localeCompare(b.date));
     const mostRecentArc = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+    const labelList = MAP_CITY_LABELS.map((label) => {
+      const point = proj.project(label.lat, label.lon);
+      return { ...label, ...point };
+    }).filter((label) => label.x > 12 && label.x < VIEW_W - 12 && label.y > 12 && label.y < VIEW_H - 12);
 
     return {
       airports: Array.from(airportMap.values()),
       arcs: arcList,
       mostRecent: mostRecentArc,
       projection: proj,
+      mapLabels: labelList,
     };
   }, [trips]);
 
@@ -373,11 +421,15 @@ export default function MapPage() {
   const uniqueAirports = analytics.uniqueAirports || 0;
   const uniqueAirlines = analytics.uniqueAirlines || 0;
   const uniqueCountries = analytics.uniqueCountries || 0;
+  const sortedArcs = [...arcs].sort((a: any, b: any) => b.date.localeCompare(a.date));
+  const routeManifest = sortedArcs.slice(0, 6);
+  const hubList = [...airports].sort((a, b) => b.count - a.count).slice(0, 5);
+  const yearTabs = Object.keys(analytics.tripsByYear || {}).sort((a, b) => Number(b) - Number(a));
 
   return (
-    <div className="min-h-screen animate-page-enter" style={{ background: "linear-gradient(180deg, #0F172A 0%, #0D2137 30%, #0B1929 60%, #091018 100%)" }}>
+    <div className="min-h-screen animate-page-enter" style={{ background: "linear-gradient(180deg, #07131F 0%, #0A2032 38%, #071826 72%, #050B12 100%)" }}>
       {/* Full-width fitted map */}
-      <div className="relative w-full" style={{ height: "min(56vh, 560px)" }}>
+      <div className="relative w-full overflow-hidden" style={{ height: "min(70vh, 720px)", minHeight: "520px" }}>
         <svg
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           className="w-full h-full"
@@ -385,11 +437,38 @@ export default function MapPage() {
           aria-hidden
         >
           <defs>
-            {/* Arc glow gradient — purple/violet */}
+            {/* Ocean and terrain gradients: higher contrast, Flighty-passport inspired */}
+            <radialGradient id="pp-ocean" cx="48%" cy="34%" r="82%">
+              <stop offset="0%" stopColor="#1C6680" />
+              <stop offset="42%" stopColor="#0D4A66" />
+              <stop offset="78%" stopColor="#082F49" />
+              <stop offset="100%" stopColor="#061827" />
+            </radialGradient>
+
+            <linearGradient id="pp-land" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#9CB872" stopOpacity="0.74" />
+              <stop offset="45%" stopColor="#5F8A64" stopOpacity="0.72" />
+              <stop offset="100%" stopColor="#314F43" stopOpacity="0.82" />
+            </linearGradient>
+
+            <radialGradient id="pp-land-highlight" cx="50%" cy="42%" r="65%">
+              <stop offset="0%" stopColor="#D3CDA1" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#2E5949" stopOpacity="0" />
+            </radialGradient>
+
+            <filter id="pp-terrain-texture" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.012 0.04" numOctaves="3" seed="9" />
+              <feColorMatrix type="saturate" values="0.32" />
+              <feComponentTransfer>
+                <feFuncA type="table" tableValues="0 0.16" />
+              </feComponentTransfer>
+            </filter>
+
+            {/* Arc glow gradient — bright blue-white for more contrast */}
             <linearGradient id="pp-arc-glow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.9" />
-              <stop offset="50%" stopColor="#14b8a6" stopOpacity="1" />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.8" />
+              <stop offset="0%" stopColor="#F8FBFF" stopOpacity="1" />
+              <stop offset="42%" stopColor="#BFDBFE" stopOpacity="1" />
+              <stop offset="100%" stopColor="#67E8F9" stopOpacity="0.95" />
             </linearGradient>
 
             {/* Gold gradient for most recent arc */}
@@ -401,7 +480,7 @@ export default function MapPage() {
 
             {/* Glow filters */}
             <filter id="pp-glow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
 
@@ -430,21 +509,58 @@ export default function MapPage() {
             </symbol>
           </defs>
 
-          {/* Subtle grid pattern */}
+          {/* Ocean base, texture, and subtle navigation grid */}
+          <rect width={VIEW_W} height={VIEW_H} fill="url(#pp-ocean)" />
+          <rect width={VIEW_W} height={VIEW_H} fill="#ffffff" filter="url(#pp-terrain-texture)" opacity="0.42" />
           <pattern id="pp-grid" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(20,184,166,0.035)" strokeWidth="0.5" />
+            <path d="M60 0 L0 0 0 60" fill="none" stroke="rgba(219,234,254,0.075)" strokeWidth="0.5" />
           </pattern>
           <rect width={VIEW_W} height={VIEW_H} fill="url(#pp-grid)" />
 
-          {/* Continent outlines — subtle, just slightly lighter than background */}
-          <g fill="none" stroke="rgba(20,184,166,0.12)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          {/* Land masses and coastlines — more visible than the old wireframe map */}
+          <g stroke="rgba(226,232,240,0.28)" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
             {COASTLINES.map((coast) => (
               <polyline
                 key={coast.name}
                 points={coastToSvgPoints(coast.points, projection.project)}
-                fill="none"
+                fill={
+                  coast.points.length > 2 &&
+                  Math.abs(coast.points[0].lat - coast.points[coast.points.length - 1].lat) < 1 &&
+                  Math.abs(coast.points[0].lon - coast.points[coast.points.length - 1].lon) < 1
+                    ? "url(#pp-land)"
+                    : "none"
+                }
+                fillOpacity="0.72"
               />
             ))}
+          </g>
+          <rect width={VIEW_W} height={VIEW_H} fill="url(#pp-land-highlight)" opacity="0.55" />
+
+          {/* Geographic labels */}
+          <g pointerEvents="none">
+            {mapLabels.map((label) => {
+              const isWater = label.scale === "water";
+              const isMajor = label.scale === "major";
+              return (
+                <text
+                  key={label.label}
+                  x={label.x}
+                  y={label.y}
+                  textAnchor="middle"
+                  fontFamily="'Satoshi', 'General Sans', 'Inter', ui-sans-serif, sans-serif"
+                  fontSize={isMajor ? 15 : isWater ? 13 : 11}
+                  fontWeight={isMajor ? 800 : 650}
+                  letterSpacing={isWater ? "0.08em" : "0.01em"}
+                  fill={isWater ? "rgba(219,234,254,0.54)" : "rgba(255,255,255,0.88)"}
+                  stroke="rgba(2,6,23,0.82)"
+                  strokeWidth={isWater ? 2.6 : 3.2}
+                  paintOrder="stroke"
+                  opacity={isWater ? 0.74 : 0.96}
+                >
+                  {label.label}
+                </text>
+              );
+            })}
           </g>
 
           {/* Arc glow layer (behind) */}
@@ -456,9 +572,9 @@ export default function MapPage() {
                 <path
                   key={`glow-${i}`}
                   d={arc.path}
-                  stroke={isRecent ? "#facc15" : "#14b8a6"}
-                  strokeWidth={isHovered ? 12 : isRecent ? 9 : 6}
-                  strokeOpacity={isHovered ? 0.45 : isRecent ? 0.3 : 0.15}
+                  stroke={isRecent ? "#facc15" : "#E0F2FE"}
+                  strokeWidth={isHovered ? 15 : isRecent ? 12 : 8}
+                  strokeOpacity={isHovered ? 0.55 : isRecent ? 0.36 : 0.25}
                   filter="url(#pp-glow)"
                   className="animate-passport-arc"
                   style={{ animationDelay: `${0.15 * i}s` }}
@@ -477,7 +593,7 @@ export default function MapPage() {
                   key={`arc-${i}`}
                   d={arc.path}
                   stroke={isRecent ? "url(#pp-arc-recent)" : "url(#pp-arc-glow)"}
-                  strokeWidth={isHovered ? 3 : isRecent ? 2.5 : 1.8}
+                  strokeWidth={isHovered ? 4.8 : isRecent ? 4 : 3.1}
                   strokeLinecap="round"
                   className="animate-passport-arc"
                   style={{
@@ -510,18 +626,18 @@ export default function MapPage() {
           {/* Airport dots */}
           {airports.map((ap, i) => {
             const isHub = ap.count >= 4;
-            const baseR = isHub ? 6 : Math.min(4 + ap.count * 0.5, 5.5);
+            const baseR = isHub ? 7 : Math.min(4.6 + ap.count * 0.55, 6.3);
             return (
               <g key={ap.code}>
                 {/* Outer pulse ring */}
-                <circle cx={ap.x} cy={ap.y} r={baseR * 2.5} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.08" className="animate-dot-pulse">
+                <circle cx={ap.x} cy={ap.y} r={baseR * 2.7} fill={isHub ? "#e0f2fe" : "#bae6fd"} fillOpacity="0.16" className="animate-dot-pulse">
                   <animate attributeName="r" values={`${baseR * 2.5};${baseR * 3.5};${baseR * 2.5}`} dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
-                  <animate attributeName="fill-opacity" values="0.08;0.03;0.08" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
+                  <animate attributeName="fill-opacity" values="0.16;0.05;0.16" dur={`${3 + i * 0.15}s`} repeatCount="indefinite" />
                 </circle>
                 {/* Inner solid dot */}
-                <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#22d3ee" : "#14b8a6"} fillOpacity="0.95" filter="url(#pp-dot-glow)" />
+                <circle cx={ap.x} cy={ap.y} r={baseR} fill={isHub ? "#7dd3fc" : "#e0f2fe"} fillOpacity="0.98" filter="url(#pp-dot-glow)" />
                 {/* White center */}
-                <circle cx={ap.x} cy={ap.y} r={baseR * 0.3} fill="white" fillOpacity="0.9" />
+                <circle cx={ap.x} cy={ap.y} r={baseR * 0.38} fill="white" fillOpacity="1" />
               </g>
             );
           })}
@@ -551,8 +667,8 @@ export default function MapPage() {
                     y1={ap.y}
                     x2={lx + (anchor === "end" ? -textW / 2 + 2 : anchor === "start" ? textW / 2 - 2 : 0)}
                     y2={ly - textH / 2 + 3}
-                    stroke="rgba(20,184,166,0.35)"
-                    strokeWidth="0.8"
+                    stroke="rgba(219,234,254,0.6)"
+                    strokeWidth="1.1"
                   />
                 )}
                 {/* Background pill */}
@@ -563,17 +679,17 @@ export default function MapPage() {
                   height={textH}
                   rx={4}
                   ry={4}
-                  fill="rgba(10,10,46,0.8)"
-                  stroke="rgba(20,184,166,0.2)"
-                  strokeWidth="0.5"
+                  fill="rgba(3,7,18,0.82)"
+                  stroke="rgba(219,234,254,0.34)"
+                  strokeWidth="0.8"
                 />
                 {/* Label text */}
                 <text
                   x={lx}
                   y={ly}
-                  fill={isHub ? "#ccfbf1" : "rgba(255,255,255,0.9)"}
+                  fill={isHub ? "#fef3c7" : "rgba(255,255,255,0.96)"}
                   fontSize={fontSize}
-                  fontWeight="600"
+                  fontWeight="800"
                   textAnchor={anchor}
                   fontFamily="'Satoshi', 'General Sans', 'Inter', ui-sans-serif, sans-serif"
                   letterSpacing="0.5"
@@ -584,6 +700,39 @@ export default function MapPage() {
             );
           })}
         </svg>
+
+        {/* Passport-style map header overlay */}
+        <div className="absolute left-4 top-4 right-4 z-10 flex flex-col gap-3 sm:left-6 sm:right-6 md:flex-row md:items-start md:justify-between">
+          <div className="rounded-[28px] px-5 py-4 shadow-2xl" style={{ background: "rgba(3,7,18,0.72)", border: "1px solid rgba(226,232,240,0.22)", backdropFilter: "blur(18px)" }}>
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] font-bold" style={{ color: "rgba(191,219,254,0.72)" }}>
+              <Plane className="w-3.5 h-3.5" />
+              All-Time Passport
+            </div>
+            <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
+              <p className="text-3xl font-extrabold text-white tabular-nums font-display leading-none">
+                {totalFlights}
+              </p>
+              <p className="pb-1 text-sm font-semibold text-white/72">
+                flights across {uniqueCountries} countries
+              </p>
+            </div>
+            <p className="mt-1 text-xs text-white/54">
+              {formatDistance(totalDistance)} miles · {formatDuration(totalDuration)} in the air · {uniqueAirports} airports
+            </p>
+          </div>
+
+          <div className="hidden rounded-2xl px-4 py-3 text-right shadow-2xl sm:block" style={{ background: "rgba(3,7,18,0.58)", border: "1px solid rgba(226,232,240,0.18)", backdropFilter: "blur(16px)" }}>
+            <p className="text-[10px] uppercase tracking-[0.22em] text-white/42 font-bold">Latest Route</p>
+            <p className="mt-1 text-lg font-extrabold text-white font-display">
+              {mostRecent ? `${mostRecent.depCode} → ${mostRecent.arrCode}` : "No flights yet"}
+            </p>
+            {mostRecent && (
+              <p className="text-xs text-white/52">
+                {mostRecent.airline} {mostRecent.flightNum} · {formatShortDate(mostRecent.date)}
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Tooltip on hover */}
         {hoveredArc !== null && arcs[hoveredArc] && (
@@ -615,14 +764,115 @@ export default function MapPage() {
         )}
 
         {/* Bottom gradient fade into stats section */}
-        <div className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent 0%, #0B1929 100%)" }} />
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(7,24,38,0.78) 58%, #071826 100%)" }} />
       </div>
 
       {/* Stats section below the map */}
-      <div className="relative z-10 max-w-2xl mx-auto px-5 pb-16 -mt-4">
+      <div className="relative z-10 max-w-5xl mx-auto px-5 pb-16 -mt-16">
+        <div className="rounded-[32px] p-4 sm:p-6 shadow-2xl" style={{ background: "rgba(248,250,252,0.94)", border: "1px solid rgba(255,255,255,0.72)", color: "#08111F", backdropFilter: "blur(20px)" }}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-display text-slate-950">
+                Passport
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                A denser route map with city labels, hub counts, and a quick travel manifest.
+              </p>
+            </div>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+              <span className="shrink-0 rounded-full bg-slate-950 px-4 py-2 text-xs font-bold text-white shadow-sm">All-Time</span>
+              {yearTabs.map((year) => (
+                <span key={year} className="shrink-0 rounded-full bg-slate-100 px-4 py-2 text-xs font-bold text-slate-500">
+                  {year}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { label: "Flights", value: totalFlights.toLocaleString(), icon: Plane },
+              { label: "Distance", value: `${formatDistance(totalDistance)} mi`, icon: Route },
+              { label: "Airports", value: uniqueAirports.toLocaleString(), icon: MapPin },
+              { label: "Countries", value: uniqueCountries.toLocaleString(), icon: CalendarDays },
+            ].map(({ label, value, icon: Icon }) => (
+              <div key={label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
+                <Icon className="mb-3 h-5 w-5 text-sky-700" />
+                <p className="text-2xl font-extrabold tabular-nums text-slate-950 font-display">{value}</p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-bold">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-[1.35fr_0.9fr]">
+            <div className="rounded-3xl p-4 sm:p-5" style={{ background: "linear-gradient(135deg, #1B0B4B 0%, #230049 52%, #071826 100%)" }}>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.26em] text-sky-200/64 font-bold">Passport · Pass · Pasaporte</p>
+                  <h2 className="mt-1 text-xl font-extrabold text-white font-display">Route Manifest</h2>
+                </div>
+                <div className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-bold text-white/72">
+                  {routeManifest.length} shown
+                </div>
+              </div>
+              <div className="space-y-2">
+                {routeManifest.map((arc: any) => (
+                  <div key={`${arc.depCode}-${arc.arrCode}-${arc.date}-${arc.flightNum}`} className="flex items-center justify-between gap-3 rounded-2xl bg-white/[0.08] px-3 py-3 ring-1 ring-white/10">
+                    <div className="min-w-0">
+                      <p className="text-sm font-extrabold text-white">
+                        {arc.depCode} → {arc.arrCode}
+                        <span className="ml-2 text-xs font-semibold text-sky-100/54">{arc.depCity} to {arc.arrCity}</span>
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-white/45">
+                        {arc.airline} {arc.flightNum} · {formatDate(arc.date)}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-extrabold tabular-nums text-amber-200">
+                      {arc.distance?.toLocaleString()} mi
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div className="rounded-3xl bg-slate-950 p-5 text-white">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-sky-200/50 font-bold">Busiest Hubs</p>
+                <div className="mt-4 space-y-3">
+                  {hubList.map((hub) => (
+                    <div key={hub.code} className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-base font-extrabold">{hub.code}</p>
+                        <p className="text-xs text-white/42">{hub.city}</p>
+                      </div>
+                      <span className="rounded-full bg-sky-400/14 px-3 py-1 text-xs font-bold text-sky-100">
+                        {hub.count} visits
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {countries.length > 0 && (
+                <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200/80">
+                  <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400 font-bold">Country Stamps</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {countries.map((c: string) => (
+                      <span key={c} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600" title={c}>
+                        <span className="mr-1.5">{getFlag(c)}</span>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Country flags row */}
         {countries.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+          <div className="flex flex-wrap items-center justify-center gap-3 my-8">
             {countries.map((c: string) => (
               <span key={c} className="drop-shadow-lg" style={{ fontSize: "30px" }} title={c}>
                 {getFlag(c)}
