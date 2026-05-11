@@ -6,9 +6,8 @@ import { getFlag } from "@/lib/country-flags";
 import { CalendarDays, Download, MapPin, Plane, Route } from "lucide-react";
 import { geoPath } from "d3-geo";
 import { feature } from "topojson-client";
-// Higher-resolution Natural Earth data (50m) — accurate country coastlines & borders
-// (replaces the previous 110m dataset which over-simplified Europe)
-import worldAtlas from "world-atlas/countries-50m.json";
+// 10m Natural Earth data is loaded lazily (see below) so it doesn't bloat
+// the initial JS bundle for users who never open the map page.
 
 /* ─── Fitted Bounding Box Projection ─── */
 const VIEW_W = 960;
@@ -17,12 +16,25 @@ const VIEW_H = 580;
 type Point = { x: number; y: number };
 type CountryFeature = GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>;
 
-const WORLD_COUNTRIES = (
-  feature(
-    worldAtlas as any,
-    (worldAtlas as any).objects.countries,
-  ) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>
-).features;
+// Lazily-loaded countries (10m Natural Earth, ~3.6 MB raw / ~750 KB gzipped).
+// Until the data arrives we render with an empty country list — ocean + airports
+// + arcs paint first, the detailed borders pop in on top a moment later.
+let WORLD_COUNTRIES: CountryFeature[] = [];
+let worldCountriesPromise: Promise<CountryFeature[]> | null = null;
+function loadWorldCountries(): Promise<CountryFeature[]> {
+  if (WORLD_COUNTRIES.length > 0) return Promise.resolve(WORLD_COUNTRIES);
+  if (worldCountriesPromise) return worldCountriesPromise;
+  worldCountriesPromise = import("world-atlas/countries-10m.json").then((mod) => {
+    const data: any = (mod as any).default ?? mod;
+    const fc = feature(
+      data,
+      data.objects.countries,
+    ) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>;
+    WORLD_COUNTRIES = fc.features;
+    return WORLD_COUNTRIES;
+  });
+  return worldCountriesPromise;
+}
 
 const COUNTRY_NAME_ALIASES: Record<string, string> = {
   "United Kingdom": "United Kingdom",
@@ -419,24 +431,64 @@ function AnimatedStat({ value, suffix }: { value: number; suffix?: string }) {
 export default function MapPage() {
   const [hoveredArc, setHoveredArc] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  // Re-render once the high-detail country geometry finishes loading.
+  const [countriesReady, setCountriesReady] = useState(WORLD_COUNTRIES.length > 0);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const trips = getTrips() as unknown as Trip[];
   const analytics = computeAnalytics();
 
+  useEffect(() => {
+    let cancelled = false;
+    loadWorldCountries().then(() => {
+      if (!cancelled) setCountriesReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleExportMap = async () => {
-    if (!mapContainerRef.current || isExporting) return;
+    if (!svgRef.current || isExporting) return;
     setIsExporting(true);
     try {
-      // Dynamic import keeps html2canvas out of the initial map-page bundle
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(mapContainerRef.current, {
-        backgroundColor: "#07131F",
-        scale: 2, // 2x for retina-quality export
-        useCORS: true,
-        logging: false,
-        // Skip the export button itself so it's not in the screenshot
-        ignoreElements: (el) => el.getAttribute?.("data-export-skip") === "true",
+      // Export the SVG directly — just the map, countries, and route lines.
+      // No overlay cards, no tooltips, no buttons.
+      const sourceSvg = svgRef.current;
+      const clone = sourceSvg.cloneNode(true) as SVGSVGElement;
+
+      // Ensure exported SVG carries its own width/height + xmlns so it renders
+      // standalone in an image element.
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      clone.setAttribute("width", String(VIEW_W));
+      clone.setAttribute("height", String(VIEW_H));
+
+      const serializer = new XMLSerializer();
+      const svgString = serializer.serializeToString(clone);
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.decoding = "async";
+      const scale = 3; // 3x for crisp, retina-grade output
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load SVG for export"));
+        img.src = url;
       });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = VIEW_W * scale;
+      canvas.height = VIEW_H * scale;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas 2D context unavailable");
+      // Solid dark background so PNG isn't transparent where the ocean gradient bleeds
+      ctx.fillStyle = "#07131F";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+
       const dataUrl = canvas.toDataURL("image/png");
       const today = new Date().toISOString().slice(0, 10);
       const link = document.createElement("a");
@@ -570,7 +622,7 @@ export default function MapPage() {
       countryShapes: shapes,
       countryLabels: labels,
     };
-  }, [trips]);
+  }, [trips, countriesReady]);
 
   const countries = analytics.countries || [];
   const totalFlights = analytics.totalFlights || 0;
@@ -589,9 +641,11 @@ export default function MapPage() {
       {/* Full-width fitted map */}
       <div ref={mapContainerRef} className="relative w-full overflow-hidden" style={{ height: "min(70vh, 720px)", minHeight: "520px" }}>
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           className="w-full h-full"
           preserveAspectRatio="xMidYMid meet"
+          shapeRendering="geometricPrecision"
           aria-hidden
         >
           <defs>
@@ -742,7 +796,7 @@ export default function MapPage() {
             ))}
           </g>
 
-          {/* Arc glow layer (behind) */}
+          {/* Subtle glow halo — dialed way down so arcs read as crisp lines, not blurred ribbons */}
           <g fill="none">
             {arcs.map((arc: any, i: number) => {
               const isRecent = mostRecent && arc.id === mostRecent.id;
@@ -752,8 +806,8 @@ export default function MapPage() {
                   key={`glow-${i}`}
                   d={arc.path}
                   stroke={isRecent ? "#facc15" : "#E0F2FE"}
-                  strokeWidth={isHovered ? 15 : isRecent ? 12 : 8}
-                  strokeOpacity={isHovered ? 0.55 : isRecent ? 0.36 : 0.25}
+                  strokeWidth={isHovered ? 6 : isRecent ? 5 : 3.5}
+                  strokeOpacity={isHovered ? 0.32 : isRecent ? 0.22 : 0.14}
                   filter="url(#pp-glow)"
                   className="animate-passport-arc"
                   style={{ animationDelay: `${0.15 * i}s` }}
@@ -762,8 +816,8 @@ export default function MapPage() {
             })}
           </g>
 
-          {/* Flight arcs — main stroke */}
-          <g fill="none">
+          {/* Flight arcs — main crisp stroke (no filter, solid stroke, precise edges) */}
+          <g fill="none" shapeRendering="geometricPrecision">
             {arcs.map((arc: any, i: number) => {
               const isRecent = mostRecent && arc.id === mostRecent.id;
               const isHovered = hoveredArc === i;
@@ -771,8 +825,8 @@ export default function MapPage() {
                 <path
                   key={`arc-${i}`}
                   d={arc.path}
-                  stroke={isRecent ? "url(#pp-arc-recent)" : "url(#pp-arc-glow)"}
-                  strokeWidth={isHovered ? 4.8 : isRecent ? 4 : 3.1}
+                  stroke={isRecent ? "#fbbf24" : "#F0F9FF"}
+                  strokeWidth={isHovered ? 2.6 : isRecent ? 2.2 : 1.7}
                   strokeLinecap="round"
                   className="animate-passport-arc"
                   style={{
@@ -780,7 +834,6 @@ export default function MapPage() {
                     cursor: "pointer",
                     transition: "stroke-width 0.2s ease",
                   }}
-                  filter={isHovered || isRecent ? "url(#pp-glow-strong)" : undefined}
                   onMouseEnter={() => setHoveredArc(i)}
                   onMouseLeave={() => setHoveredArc(null)}
                 />
