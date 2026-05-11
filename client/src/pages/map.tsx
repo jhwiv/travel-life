@@ -3,10 +3,12 @@ import { AIRPORTS } from "@/lib/airport-data";
 import { getTrips, computeAnalytics } from "@/lib/static-data";
 import type { Trip } from "@shared/schema";
 import { getFlag } from "@/lib/country-flags";
-import { CalendarDays, MapPin, Plane, Route } from "lucide-react";
+import { CalendarDays, Download, MapPin, Plane, Route } from "lucide-react";
 import { geoPath } from "d3-geo";
 import { feature } from "topojson-client";
-import worldAtlas from "world-atlas/countries-110m.json";
+// Higher-resolution Natural Earth data (50m) — accurate country coastlines & borders
+// (replaces the previous 110m dataset which over-simplified Europe)
+import worldAtlas from "world-atlas/countries-50m.json";
 
 /* ─── Fitted Bounding Box Projection ─── */
 const VIEW_W = 960;
@@ -416,8 +418,39 @@ function AnimatedStat({ value, suffix }: { value: number; suffix?: string }) {
 
 export default function MapPage() {
   const [hoveredArc, setHoveredArc] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const trips = getTrips() as unknown as Trip[];
   const analytics = computeAnalytics();
+
+  const handleExportMap = async () => {
+    if (!mapContainerRef.current || isExporting) return;
+    setIsExporting(true);
+    try {
+      // Dynamic import keeps html2canvas out of the initial map-page bundle
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(mapContainerRef.current, {
+        backgroundColor: "#07131F",
+        scale: 2, // 2x for retina-quality export
+        useCORS: true,
+        logging: false,
+        // Skip the export button itself so it's not in the screenshot
+        ignoreElements: (el) => el.getAttribute?.("data-export-skip") === "true",
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const today = new Date().toISOString().slice(0, 10);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `grand-loop-map-${today}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Map export failed:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { airports, arcs, mostRecent, projection, mapLabels, countryShapes, countryLabels } = useMemo(() => {
     const flights = trips.filter((t: any) => t.type === "flight" && t.status === "completed");
@@ -554,7 +587,7 @@ export default function MapPage() {
   return (
     <div className="min-h-screen animate-page-enter" style={{ background: "linear-gradient(180deg, #07131F 0%, #0A2032 38%, #071826 72%, #050B12 100%)" }}>
       {/* Full-width fitted map */}
-      <div className="relative w-full overflow-hidden" style={{ height: "min(70vh, 720px)", minHeight: "520px" }}>
+      <div ref={mapContainerRef} className="relative w-full overflow-hidden" style={{ height: "min(70vh, 720px)", minHeight: "520px" }}>
         <svg
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           className="w-full h-full"
@@ -905,6 +938,26 @@ export default function MapPage() {
             </div>
           </div>
         )}
+
+        {/* Export button — bottom-right of map */}
+        <button
+          type="button"
+          data-export-skip="true"
+          onClick={handleExportMap}
+          disabled={isExporting}
+          aria-label="Export map as PNG image"
+          className="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] shadow-2xl transition disabled:cursor-wait disabled:opacity-70 hover:scale-[1.03] active:scale-[0.98]"
+          style={{
+            background: "rgba(3,7,18,0.78)",
+            border: "1px solid rgba(226,232,240,0.28)",
+            color: "rgba(255,255,255,0.92)",
+            backdropFilter: "blur(14px)",
+            WebkitBackdropFilter: "blur(14px)",
+          }}
+        >
+          <Download className="h-3.5 w-3.5" />
+          {isExporting ? "Exporting…" : "Export Map"}
+        </button>
 
         {/* Bottom gradient fade into stats section */}
         <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none" style={{ background: "linear-gradient(180deg, transparent 0%, rgba(7,24,38,0.78) 58%, #071826 100%)" }} />
