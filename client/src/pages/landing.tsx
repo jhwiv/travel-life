@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Plane, TrainFront, Globe, MapPin, Route, Plus, ArrowRight } from "lucide-react";
+import { Plane, TrainFront, Globe, MapPin, Route, Plus, ArrowRight, Camera } from "lucide-react";
+import { geoPath } from "d3-geo";
+import { feature } from "topojson-client";
+import { AIRPORTS } from "@/lib/airport-data";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -119,6 +122,402 @@ function AddFlightDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdd
   );
 }
 
+/* ═══════════════════════════════════════════════════════
+   EUROPE MAP SCREENSHOT — draws entirely on Canvas 2D
+   No SVG serialization, no blob URL, works on iOS Safari.
+   ═══════════════════════════════════════════════════════ */
+
+// Map viewport
+const SC_W = 1080;   // phone-portrait width @3x
+const SC_MAP_H = 720;
+const SC_PAD = 40;
+const SC_MIN_LON = -12, SC_MAX_LON = 36;
+const SC_MIN_LAT = 33,  SC_MAX_LAT = 72;
+
+function scMercY(lat: number) {
+  const r = (Math.max(-80, Math.min(80, lat)) * Math.PI) / 180;
+  return Math.log(Math.tan(Math.PI / 4 + r / 2));
+}
+const SC_YMIN = scMercY(SC_MIN_LAT);
+const SC_YMAX = scMercY(SC_MAX_LAT);
+
+function scProject(lat: number, lon: number): [number, number] {
+  const x = SC_PAD + ((lon - SC_MIN_LON) / (SC_MAX_LON - SC_MIN_LON)) * (SC_W - SC_PAD * 2);
+  const my = scMercY(lat);
+  const yNorm = (my - SC_YMIN) / (SC_YMAX - SC_YMIN);
+  const y = SC_MAP_H - SC_PAD - yNorm * (SC_MAP_H - SC_PAD * 2);
+  return [x, y];
+}
+
+// Train station coords not in AIRPORTS
+const SC_STATIONS: Record<string, { lat: number; lon: number; city: string }> = {
+  STP: { lat: 51.5308, lon: -0.1238, city: "London" },
+  PNO: { lat: 48.8767, lon:  2.3591, city: "Paris"  },
+  MIL: { lat: 45.4642, lon:  9.1900, city: "Milan"  },
+};
+
+function scGetXY(code: string): [number, number] | null {
+  if (AIRPORTS[code]) return scProject(AIRPORTS[code].lat, AIRPORTS[code].lon);
+  if (SC_STATIONS[code]) return scProject(SC_STATIONS[code].lat, SC_STATIONS[code].lon);
+  return null;
+}
+function scGetCity(code: string): string {
+  if (AIRPORTS[code]) return AIRPORTS[code].city;
+  if (SC_STATIONS[code]) return SC_STATIONS[code].city;
+  return code;
+}
+
+function scDrawArc(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  isTrain: boolean,
+) {
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const dx = x2 - x1, dy = y2 - y1;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const c = Math.min(dist * 0.22, 110);
+  const nx = -dy / dist, ny = dx / dist;
+  const cx1 = mx + nx * c;
+  const cy1 = my + ny * c * 0.25 - c * 0.35;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.quadraticCurveTo(cx1, cy1, x2, y2);
+
+  if (isTrain) {
+    ctx.setLineDash([14, 7]);
+    ctx.strokeStyle = "rgba(251,191,36,0.92)";
+    ctx.lineWidth = 4;
+  } else {
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "rgba(125,209,252,0.92)";
+    ctx.lineWidth = 5;
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function scFormatDate(d: string) {
+  if (!d) return "";
+  return new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+async function screenshotEuropeMap(trips: any[]): Promise<void> {
+  // 1. Load world atlas
+  const mod = await import("world-atlas/countries-10m.json");
+  const data: any = (mod as any).default ?? mod;
+  const fc = feature(
+    data,
+    data.objects.countries,
+  ) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>;
+  const countries = fc.features;
+
+  // d3 geoPath stream adapter
+  const scProjection = {
+    stream(s: any) {
+      return {
+        point(lon: number, lat: number) {
+          const [x, y] = scProject(lat, lon);
+          s.point(x, y);
+        },
+        lineStart()   { s.lineStart(); },
+        lineEnd()     { s.lineEnd(); },
+        polygonStart(){ s.polygonStart(); },
+        polygonEnd()  { s.polygonEnd(); },
+        sphere()      { s.sphere(); },
+      };
+    },
+  };
+  const scPath = geoPath(scProjection as any);
+
+  // 2. Filter European trips
+  const euTrips = trips.filter((t: any) => {
+    const dep = t.departureCode || t.departure_code || "";
+    const arr = t.arrivalCode   || t.arrival_code   || "";
+    const f = scGetXY(dep);
+    const t2 = scGetXY(arr);
+    if (!f || !t2) return false;
+    const inBounds = ([x, y]: [number, number]) =>
+      x > -20 && x < SC_W + 20 && y > -20 && y < SC_MAP_H + 20;
+    return inBounds(f) && inBounds(t2);
+  });
+
+  // 3. Build canvas
+  const ROW_H = 52;
+  const TABLE_H = Math.max(ROW_H * (euTrips.length + 1) + 24, 80);
+  const HEADER_H = 80;
+  const TOTAL_H = HEADER_H + SC_MAP_H + TABLE_H + 40;
+
+  const canvas = document.createElement("canvas");
+  canvas.width  = SC_W;
+  canvas.height = TOTAL_H;
+  const ctx = canvas.getContext("2d")!;
+
+  // --- Background ---
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, TOTAL_H);
+  bgGrad.addColorStop(0,   "#071826");
+  bgGrad.addColorStop(0.6, "#061020");
+  bgGrad.addColorStop(1,   "#040c18");
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, SC_W, TOTAL_H);
+
+  // --- Header ---
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("Europe Routes", SC_PAD, 52);
+  const fCount = euTrips.filter((t: any) => t.type !== "train").length;
+  const rCount = euTrips.filter((t: any) => t.type === "train").length;
+  ctx.fillStyle = "rgba(125,209,252,0.65)";
+  ctx.font = "500 22px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+  ctx.fillText(`${fCount} flights · ${rCount} rail`, SC_PAD, 76);
+
+  // --- Map ocean ---
+  const oceanGrad = ctx.createRadialGradient(SC_W * 0.48, HEADER_H + SC_MAP_H * 0.34, 0, SC_W * 0.48, HEADER_H + SC_MAP_H * 0.34, SC_W * 0.9);
+  oceanGrad.addColorStop(0,   "#1C6680");
+  oceanGrad.addColorStop(0.45,"#0D4A66");
+  oceanGrad.addColorStop(0.8, "#082F49");
+  oceanGrad.addColorStop(1,   "#061827");
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(0, HEADER_H, SC_W, SC_MAP_H);
+
+  // --- Country polygons ---
+  const p2d = new Path2D();
+  countries.forEach((country: any) => {
+    const d = scPath(country);
+    if (!d) return;
+    // clip to europe viewport
+    const [[x0, y0], [x1, y1]] = scPath.bounds(country);
+    if (x1 < -60 || x0 > SC_W + 60 || y1 + HEADER_H < HEADER_H - 60 || y0 > SC_MAP_H + 60) return;
+    const path = new Path2D(d);
+    p2d.__proto__; // noop, just ensure Path2D is used
+    ctx.save();
+    ctx.translate(0, HEADER_H);
+    ctx.fillStyle = "rgba(90,120,80,0.72)";
+    ctx.fill(path);
+    ctx.strokeStyle = "rgba(20,40,30,0.55)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke(path);
+    ctx.restore();
+  });
+
+  // --- Arcs ---
+  euTrips.forEach((t: any) => {
+    const dep = t.departureCode || t.departure_code || "";
+    const arr = t.arrivalCode   || t.arrival_code   || "";
+    const f = scGetXY(dep);
+    const to = scGetXY(arr);
+    if (!f || !to) return;
+    ctx.save();
+    ctx.translate(0, HEADER_H);
+    scDrawArc(ctx, f[0], f[1], to[0], to[1], t.type === "train");
+    ctx.restore();
+  });
+
+  // --- Airport dots + labels ---
+  const dotMap = new Map<string, { xy: [number, number]; city: string; isTrain: boolean; count: number }>();
+  euTrips.forEach((t: any) => {
+    const isTrain = t.type === "train";
+    for (const code of [
+      t.departureCode || t.departure_code || "",
+      t.arrivalCode   || t.arrival_code   || "",
+    ]) {
+      if (!code) continue;
+      const xy = scGetXY(code);
+      if (!xy) continue;
+      const ex = dotMap.get(code);
+      if (ex) ex.count++;
+      else dotMap.set(code, { xy, city: scGetCity(code), isTrain, count: 1 });
+    }
+  });
+
+  dotMap.forEach(({ xy: [x, y], code, isTrain, count }: any) => {
+    const r = Math.min(6 + count, 11);
+    const col = isTrain ? "rgba(251,191,36,0.95)" : "rgba(125,209,252,0.95)";
+    ctx.save();
+    ctx.translate(0, HEADER_H);
+    // halo
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = isTrain ? "rgba(251,191,36,0.12)" : "rgba(125,209,252,0.12)";
+    ctx.fill();
+    // dot
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.fill();
+    // white center
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Code labels
+  dotMap.forEach(({ xy: [x, y], isTrain }: any, code: string) => {
+    ctx.save();
+    ctx.translate(0, HEADER_H);
+    const labelX = x + 10;
+    const labelY = y - 6;
+    const tw = code.length * 9 + 12;
+    const th = 20;
+    ctx.fillStyle = "rgba(3,7,18,0.86)";
+    ctx.beginPath();
+    ctx.roundRect(labelX, labelY - th + 4, tw, th, 4);
+    ctx.fill();
+    ctx.fillStyle = isTrain ? "rgba(253,230,138,0.95)" : "rgba(255,255,255,0.95)";
+    ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(code, labelX + 6, labelY);
+    ctx.restore();
+  });
+
+  // --- Legend ---
+  const lx = SC_PAD, ly = HEADER_H + SC_MAP_H - 64;
+  ctx.fillStyle = "rgba(3,7,18,0.82)";
+  ctx.beginPath();
+  ctx.roundRect(lx, ly, 220, 52, 10);
+  ctx.fill();
+  // flight line
+  ctx.strokeStyle = "rgba(125,209,252,0.9)";
+  ctx.lineWidth = 4;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(lx + 14, ly + 18); ctx.lineTo(lx + 60, ly + 18);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("FLIGHT", lx + 68, ly + 23);
+  // rail line
+  ctx.strokeStyle = "rgba(251,191,36,0.9)";
+  ctx.lineWidth = 3.5;
+  ctx.setLineDash([10, 5]);
+  ctx.beginPath();
+  ctx.moveTo(lx + 14, ly + 38); ctx.lineTo(lx + 60, ly + 38);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.fillText("RAIL", lx + 68, ly + 43);
+
+  // --- Trip Table ---
+  const tableY = HEADER_H + SC_MAP_H + 20;
+  const cols = [
+    { label: "TYPE",        w: 130 },
+    { label: "FROM",        w: 220 },
+    { label: "TO",          w: 220 },
+    { label: "DATE",        w: 220 },
+    { label: "CARRIER",     w: 290 },
+  ];
+  const totalW = cols.reduce((s, c) => s + c.w, 0);
+  const tableX = (SC_W - totalW) / 2;
+
+  // Table background
+  ctx.fillStyle = "rgba(6,16,32,0.96)";
+  ctx.beginPath();
+  ctx.roundRect(tableX - 16, tableY, totalW + 32, TABLE_H, 16);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(226,232,240,0.09)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Header row
+  ctx.fillStyle = "rgba(255,255,255,0.28)";
+  ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+  ctx.textAlign = "left";
+  let cx = tableX;
+  cols.forEach(col => {
+    ctx.fillText(col.label, cx, tableY + 28);
+    cx += col.w;
+  });
+
+  // Separator
+  ctx.strokeStyle = "rgba(226,232,240,0.07)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tableX - 16, tableY + 38);
+  ctx.lineTo(tableX + totalW + 16, tableY + 38);
+  ctx.stroke();
+
+  // Data rows
+  const sorted = [...euTrips].sort((a: any, b: any) =>
+    (a.departureDate || a.departure_date || "").localeCompare(
+     (b.departureDate || b.departure_date || ""))
+  );
+  sorted.forEach((t: any, i: number) => {
+    const ry = tableY + 38 + i * ROW_H + 14;
+    const isTrain = t.type === "train";
+    const dep = t.departureCode || t.departure_code || "";
+    const arr = t.arrivalCode   || t.arrival_code   || "";
+    const depCity = t.departureCity || t.departure_city || dep;
+    const arrCity = t.arrivalCity   || t.arrival_city   || arr;
+    const date    = t.departureDate || t.departure_date || "";
+    const carrier = isTrain
+      ? (t.trainOperator || t.train_operator || "Rail")
+      : (t.airline || "");
+
+    // Row separator
+    if (i > 0) {
+      ctx.strokeStyle = "rgba(226,232,240,0.045)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(tableX - 16, ry - 14);
+      ctx.lineTo(tableX + totalW + 16, ry - 14);
+      ctx.stroke();
+    }
+
+    cx = tableX;
+
+    // Type
+    ctx.font = "bold 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillStyle = isTrain ? "rgba(253,230,138,0.85)" : "rgba(186,230,253,0.85)";
+    ctx.textAlign = "left";
+    ctx.fillText(isTrain ? "✦ Rail" : "✈ Flight", cx, ry + 5);
+    cx += cols[0].w;
+
+    // From
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText(depCity, cx, ry + 5);
+    ctx.fillStyle = "rgba(255,255,255,0.32)";
+    ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText(dep, cx, ry + 22);
+    cx += cols[1].w;
+
+    // To
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText(arrCity, cx, ry + 5);
+    ctx.fillStyle = "rgba(255,255,255,0.32)";
+    ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText(arr, cx, ry + 22);
+    cx += cols[2].w;
+
+    // Date
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "500 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText(scFormatDate(date), cx, ry + 5);
+    cx += cols[3].w;
+
+    // Carrier
+    ctx.fillStyle = "rgba(255,255,255,0.42)";
+    ctx.font = "500 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+    ctx.fillText(carrier, cx, ry + 5);
+  });
+
+  // Footer
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.font = "500 16px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("grandloopstudio.com", SC_W / 2, TOTAL_H - 16);
+
+  // 4. Open PNG directly in browser
+  const dataUrl = canvas.toDataURL("image/png");
+  window.open(dataUrl, "_blank");
+}
+
 /** Animated stat number */
 function AnimatedStat({ value, suffix }: { value: number; suffix?: string }) {
   const animated = useCountUp(value);
@@ -128,6 +527,7 @@ function AnimatedStat({ value, suffix }: { value: number; suffix?: string }) {
 export default function Landing() {
   const [, navigate] = useLocation();
   const [version, setVersion] = useState(0);
+  const [isScreenshotting, setIsScreenshotting] = useState(false);
 
   const analytics = computeAnalytics() as unknown as Analytics;
   const trips = getTrips() as unknown as Trip[];
@@ -135,6 +535,18 @@ export default function Landing() {
   const _ = version;
 
   const onAdded = () => setVersion((v) => v + 1);
+
+  const handleScreenshot = useCallback(async () => {
+    if (isScreenshotting) return;
+    setIsScreenshotting(true);
+    try {
+      await screenshotEuropeMap(trips as any[]);
+    } catch (err) {
+      console.error("Screenshot failed:", err);
+    } finally {
+      setIsScreenshotting(false);
+    }
+  }, [trips, isScreenshotting]);
 
   const hasData = analytics && analytics.totalTrips > 0;
   const recentTrips = trips.slice(0, 4);
@@ -233,6 +645,16 @@ export default function Landing() {
                 {label}
               </Button>
             ))}
+            <Button
+              size="sm"
+              disabled={isScreenshotting}
+              onClick={handleScreenshot}
+              className="gap-1.5 px-4 sm:px-6 text-xs sm:text-sm font-bold rounded-xl shadow-lg disabled:opacity-60 disabled:cursor-wait"
+              style={{ background: "linear-gradient(135deg, rgba(91,200,240,0.22), rgba(30,58,95,0.28))", border: "1px solid rgba(147,197,253,0.35)", color: "#7DD3FC" }}
+            >
+              <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              {isScreenshotting ? "Building map…" : "Screenshot Map"}
+            </Button>
           </div>
         </div>
 
