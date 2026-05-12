@@ -7,3 +7,4 @@ if (!window.location.hash) {
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
+
