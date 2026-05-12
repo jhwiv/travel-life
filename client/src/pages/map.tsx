@@ -431,6 +431,7 @@ function AnimatedStat({ value, suffix }: { value: number; suffix?: string }) {
 export default function MapPage() {
   const [hoveredArc, setHoveredArc] = useState<number | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [mapTab, setMapTab] = useState<"world" | "europe">("world");
   // Re-render once the high-detail country geometry finishes loading.
   const [countriesReady, setCountriesReady] = useState(WORLD_COUNTRIES.length > 0);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -638,6 +639,26 @@ export default function MapPage() {
 
   return (
     <div className="min-h-screen animate-page-enter" style={{ background: "linear-gradient(180deg, #07131F 0%, #0A2032 38%, #071826 72%, #050B12 100%)" }}>
+
+      {/* ── Tab switcher ── */}
+      <div className="flex items-center gap-2 px-5 pl-14 lg:pl-8 pt-4 pb-1">
+        {(["world", "europe"] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setMapTab(tab)}
+            className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.18em] transition-all"
+            style={{
+              background: mapTab === tab ? "rgba(91,200,240,0.18)" : "rgba(255,255,255,0.04)",
+              color: mapTab === tab ? "#7DD3FC" : "rgba(255,255,255,0.38)",
+              border: mapTab === tab ? "1px solid rgba(147,197,253,0.35)" : "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            {tab === "world" ? "World" : "Europe"}
+          </button>
+        ))}
+      </div>
+
+      {mapTab === "world" && <>
       {/* Full-width fitted map */}
       <div ref={mapContainerRef} className="relative w-full overflow-hidden" style={{ height: "min(70vh, 720px)", minHeight: "520px" }}>
         <svg
@@ -1216,8 +1237,11 @@ export default function MapPage() {
         </div>
       </div>
 
-      {/* ─── EUROPE SECTION ─── */}
-      <EuropeSection trips={trips} countriesReady={countriesReady} />
+      </> }
+
+      {mapTab === "europe" &&
+        <EuropeSection trips={trips} countriesReady={countriesReady} />
+      }
     </div>
   );
 }
@@ -1434,7 +1458,7 @@ function EuropeSection({ trips, countriesReady }: { trips: Trip[]; countriesRead
   const trainCount  = euArcs.filter(a =>  a.isTrain).length;
 
   return (
-    <div className="mt-10 pb-16" style={{ background: "linear-gradient(180deg, #071826 0%, #061020 100%)" }}>
+    <div className="pb-16" style={{ background: "linear-gradient(180deg, #071826 0%, #061020 100%)" }}>
       {/* Section header */}
       <div className="px-5 pl-14 lg:pl-8 pt-6 pb-3 flex items-center justify-between">
         <div>
