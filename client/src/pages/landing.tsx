@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { Plane, TrainFront, Globe, MapPin, Route, Plus, ArrowRight, Camera } from "lucide-react";
-import { geoPath } from "d3-geo";
-import { feature } from "topojson-client";
+import { geoPath as geoPathImport } from "d3-geo";
+import { feature as featureImport } from "topojson-client";
 import { AIRPORTS } from "@/lib/airport-data";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,38 +122,43 @@ function AddFlightDialog({ trigger, onAdded }: { trigger: React.ReactNode; onAdd
   );
 }
 
-/* ═══════════════════════════════════════════════════════
-   EUROPE MAP SCREENSHOT — draws entirely on Canvas 2D
-   No SVG serialization, no blob URL, works on iOS Safari.
-   ═══════════════════════════════════════════════════════ */
 
-// Map viewport
-const SC_W = 1080;   // phone-portrait width @3x
-const SC_MAP_H = 720;
-const SC_PAD = 40;
-const SC_MIN_LON = -12, SC_MAX_LON = 36;
-const SC_MIN_LAT = 33,  SC_MAX_LAT = 72;
+/* ═══════════════════════════════════════════════════════════════════
+   EUROPE MAP SCREENSHOT — pure Canvas 2D, two images, correct aspect
+   ═══════════════════════════════════════════════════════════════════ */
 
-function scMercY(lat: number) {
+// Viewport bounds
+const SC_MIN_LON = -14, SC_MAX_LON = 40;
+const SC_MIN_LAT = 34,  SC_MAX_LAT = 71;
+
+function scMercY(lat: number): number {
   const r = (Math.max(-80, Math.min(80, lat)) * Math.PI) / 180;
   return Math.log(Math.tan(Math.PI / 4 + r / 2));
 }
 const SC_YMIN = scMercY(SC_MIN_LAT);
 const SC_YMAX = scMercY(SC_MAX_LAT);
 
+// Compute canvas dimensions so 1 degree lon == 1 radian merc unit (undistorted Mercator)
+const SC_PAD        = 48;
+const SC_INNER_W    = 1000;                                         // usable width px
+const SC_LON_SPAN_R = (SC_MAX_LON - SC_MIN_LON) * Math.PI / 180;  // lon span in radians
+const SC_MERC_SPAN  = SC_YMAX - SC_YMIN;                           // merc y span (radians)
+const SC_INNER_H    = Math.round(SC_INNER_W * SC_MERC_SPAN / SC_LON_SPAN_R);
+const SC_W          = SC_INNER_W + SC_PAD * 2;
+const SC_MAP_H      = SC_INNER_H + SC_PAD * 2;
+
 function scProject(lat: number, lon: number): [number, number] {
-  const x = SC_PAD + ((lon - SC_MIN_LON) / (SC_MAX_LON - SC_MIN_LON)) * (SC_W - SC_PAD * 2);
-  const my = scMercY(lat);
-  const yNorm = (my - SC_YMIN) / (SC_YMAX - SC_YMIN);
-  const y = SC_MAP_H - SC_PAD - yNorm * (SC_MAP_H - SC_PAD * 2);
+  const x = SC_PAD + ((lon - SC_MIN_LON) / (SC_MAX_LON - SC_MIN_LON)) * SC_INNER_W;
+  const yNorm = (scMercY(lat) - SC_YMIN) / SC_MERC_SPAN;
+  const y = SC_PAD + (1 - yNorm) * SC_INNER_H;
   return [x, y];
 }
 
-// Train station coords not in AIRPORTS
+// Train stations not in AIRPORTS
 const SC_STATIONS: Record<string, { lat: number; lon: number; city: string }> = {
-  STP: { lat: 51.5308, lon: -0.1238, city: "London" },
-  PNO: { lat: 48.8767, lon:  2.3591, city: "Paris"  },
-  MIL: { lat: 45.4642, lon:  9.1900, city: "Milan"  },
+  STP: { lat: 51.5308, lon: -0.1238, city: "London"  },
+  PNO: { lat: 48.8767, lon:  2.3591, city: "Paris"   },
+  MIL: { lat: 45.4642, lon:  9.1900, city: "Milan"   },
 };
 
 function scGetXY(code: string): [number, number] | null {
@@ -166,359 +171,298 @@ function scGetCity(code: string): string {
   if (SC_STATIONS[code]) return SC_STATIONS[code].city;
   return code;
 }
+function scFormatDate(d: string) {
+  if (!d) return "";
+  return new Date(`${d}T12:00:00`).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+  });
+}
 
 function scDrawArc(
   ctx: CanvasRenderingContext2D,
-  x1: number, y1: number,
-  x2: number, y2: number,
+  x1: number, y1: number, x2: number, y2: number,
   isTrain: boolean,
 ) {
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const dx = x2 - x1, dy = y2 - y1;
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-  const c = Math.min(dist * 0.22, 110);
+  const c = Math.min(dist * 0.22, 120);
   const nx = -dy / dist, ny = dx / dist;
-  const cx1 = mx + nx * c;
-  const cy1 = my + ny * c * 0.25 - c * 0.35;
-
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.quadraticCurveTo(cx1, cy1, x2, y2);
-
+  ctx.quadraticCurveTo(mx + nx * c, my + ny * c * 0.25 - c * 0.35, x2, y2);
   if (isTrain) {
-    ctx.setLineDash([14, 7]);
-    ctx.strokeStyle = "rgba(251,191,36,0.92)";
-    ctx.lineWidth = 4;
+    ctx.setLineDash([16, 8]);
+    ctx.strokeStyle = "rgba(251,191,36,0.95)";
+    ctx.lineWidth = 5;
   } else {
     ctx.setLineDash([]);
-    ctx.strokeStyle = "rgba(125,209,252,0.92)";
-    ctx.lineWidth = 5;
+    ctx.strokeStyle = "rgba(125,209,252,0.95)";
+    ctx.lineWidth = 6;
   }
   ctx.stroke();
   ctx.setLineDash([]);
 }
 
-function scFormatDate(d: string) {
-  if (!d) return "";
-  return new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
 async function screenshotEuropeMap(trips: any[]): Promise<void> {
-  // 1. Load world atlas
+  // ── 1. Load Natural Earth country polygons ──────────────────────
   const mod = await import("world-atlas/countries-10m.json");
   const data: any = (mod as any).default ?? mod;
-  const fc = feature(
-    data,
-    data.objects.countries,
+  const fc = featureImport(
+    data, data.objects.countries,
   ) as unknown as GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }>;
   const countries = fc.features;
 
-  // d3 geoPath stream adapter
   const scProjection = {
     stream(s: any) {
       return {
-        point(lon: number, lat: number) {
-          const [x, y] = scProject(lat, lon);
-          s.point(x, y);
-        },
-        lineStart()   { s.lineStart(); },
-        lineEnd()     { s.lineEnd(); },
-        polygonStart(){ s.polygonStart(); },
-        polygonEnd()  { s.polygonEnd(); },
-        sphere()      { s.sphere(); },
+        point(lon: number, lat: number) { const [x,y] = scProject(lat,lon); s.point(x,y); },
+        lineStart()    { s.lineStart(); },
+        lineEnd()      { s.lineEnd(); },
+        polygonStart() { s.polygonStart(); },
+        polygonEnd()   { s.polygonEnd(); },
+        sphere()       { s.sphere(); },
       };
     },
   };
-  const scPath = geoPath(scProjection as any);
+  const scPath = geoPathImport(scProjection as any);
 
-  // 2. Filter European trips
+  // ── 2. Filter to European trips ─────────────────────────────────
   const euTrips = trips.filter((t: any) => {
     const dep = t.departureCode || t.departure_code || "";
     const arr = t.arrivalCode   || t.arrival_code   || "";
-    const f = scGetXY(dep);
-    const t2 = scGetXY(arr);
-    if (!f || !t2) return false;
-    const inBounds = ([x, y]: [number, number]) =>
-      x > -20 && x < SC_W + 20 && y > -20 && y < SC_MAP_H + 20;
-    return inBounds(f) && inBounds(t2);
+    const f = scGetXY(dep), to = scGetXY(arr);
+    if (!f || !to) return false;
+    const inBounds = ([x, y]: [number,number]) =>
+      x > -30 && x < SC_W + 30 && y > -30 && y < SC_MAP_H + 30;
+    return inBounds(f) && inBounds(to);
   });
 
-  // 3. Build canvas
-  const ROW_H = 52;
-  const TABLE_H = Math.max(ROW_H * (euTrips.length + 1) + 24, 80);
-  const HEADER_H = 80;
-  const TOTAL_H = HEADER_H + SC_MAP_H + TABLE_H + 40;
+  // ── 3. Draw IMAGE 1 — the map ────────────────────────────────────
+  const mapCanvas = document.createElement("canvas");
+  mapCanvas.width  = SC_W;
+  mapCanvas.height = SC_MAP_H;
+  const mc = mapCanvas.getContext("2d")!;
 
-  const canvas = document.createElement("canvas");
-  canvas.width  = SC_W;
-  canvas.height = TOTAL_H;
-  const ctx = canvas.getContext("2d")!;
+  // Ocean background
+  const oceanGrad = mc.createRadialGradient(
+    SC_W * 0.42, SC_MAP_H * 0.32, 0,
+    SC_W * 0.42, SC_MAP_H * 0.32, SC_W * 0.85,
+  );
+  oceanGrad.addColorStop(0,    "#1B6179");
+  oceanGrad.addColorStop(0.4,  "#0D4260");
+  oceanGrad.addColorStop(0.75, "#082A45");
+  oceanGrad.addColorStop(1,    "#061622");
+  mc.fillStyle = oceanGrad;
+  mc.fillRect(0, 0, SC_W, SC_MAP_H);
 
-  // --- Background ---
-  const bgGrad = ctx.createLinearGradient(0, 0, 0, TOTAL_H);
-  bgGrad.addColorStop(0,   "#071826");
-  bgGrad.addColorStop(0.6, "#061020");
-  bgGrad.addColorStop(1,   "#040c18");
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, SC_W, TOTAL_H);
-
-  // --- Header ---
-  ctx.fillStyle = "rgba(255,255,255,0.92)";
-  ctx.font = "bold 38px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("Europe Routes", SC_PAD, 52);
-  const fCount = euTrips.filter((t: any) => t.type !== "train").length;
-  const rCount = euTrips.filter((t: any) => t.type === "train").length;
-  ctx.fillStyle = "rgba(125,209,252,0.65)";
-  ctx.font = "500 22px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-  ctx.fillText(`${fCount} flights · ${rCount} rail`, SC_PAD, 76);
-
-  // --- Map ocean ---
-  const oceanGrad = ctx.createRadialGradient(SC_W * 0.48, HEADER_H + SC_MAP_H * 0.34, 0, SC_W * 0.48, HEADER_H + SC_MAP_H * 0.34, SC_W * 0.9);
-  oceanGrad.addColorStop(0,   "#1C6680");
-  oceanGrad.addColorStop(0.45,"#0D4A66");
-  oceanGrad.addColorStop(0.8, "#082F49");
-  oceanGrad.addColorStop(1,   "#061827");
-  ctx.fillStyle = oceanGrad;
-  ctx.fillRect(0, HEADER_H, SC_W, SC_MAP_H);
-
-  // --- Country polygons ---
-  const p2d = new Path2D();
+  // Country fills
   countries.forEach((country: any) => {
     const d = scPath(country);
     if (!d) return;
-    // clip to europe viewport
     const [[x0, y0], [x1, y1]] = scPath.bounds(country);
-    if (x1 < -60 || x0 > SC_W + 60 || y1 + HEADER_H < HEADER_H - 60 || y0 > SC_MAP_H + 60) return;
+    if (x1 < -SC_PAD || x0 > SC_W + SC_PAD || y1 < -SC_PAD || y0 > SC_MAP_H + SC_PAD) return;
     const path = new Path2D(d);
-    p2d.__proto__; // noop, just ensure Path2D is used
-    ctx.save();
-    ctx.translate(0, HEADER_H);
-    ctx.fillStyle = "rgba(90,120,80,0.72)";
-    ctx.fill(path);
-    ctx.strokeStyle = "rgba(20,40,30,0.55)";
-    ctx.lineWidth = 0.8;
-    ctx.stroke(path);
-    ctx.restore();
+    mc.fillStyle = "#4E7250";
+    mc.fill(path);
+    mc.strokeStyle = "rgba(15,35,20,0.60)";
+    mc.lineWidth = 0.9;
+    mc.stroke(path);
   });
 
-  // --- Arcs ---
+  // Flight/rail arcs
   euTrips.forEach((t: any) => {
     const dep = t.departureCode || t.departure_code || "";
     const arr = t.arrivalCode   || t.arrival_code   || "";
-    const f = scGetXY(dep);
-    const to = scGetXY(arr);
+    const f = scGetXY(dep), to = scGetXY(arr);
     if (!f || !to) return;
-    ctx.save();
-    ctx.translate(0, HEADER_H);
-    scDrawArc(ctx, f[0], f[1], to[0], to[1], t.type === "train");
-    ctx.restore();
+    scDrawArc(mc, f[0], f[1], to[0], to[1], t.type === "train");
   });
 
-  // --- Airport dots + labels ---
-  const dotMap = new Map<string, { xy: [number, number]; city: string; isTrain: boolean; count: number }>();
+  // Airport dots + labels
+  const dotMap = new Map<string, { xy: [number,number]; isTrain: boolean; count: number }>();
   euTrips.forEach((t: any) => {
-    const isTrain = t.type === "train";
-    for (const code of [
-      t.departureCode || t.departure_code || "",
-      t.arrivalCode   || t.arrival_code   || "",
-    ]) {
+    for (const [code, isTrain] of [
+      [t.departureCode || t.departure_code || "", t.type === "train"],
+      [t.arrivalCode   || t.arrival_code   || "", t.type === "train"],
+    ] as [string,boolean][]) {
       if (!code) continue;
       const xy = scGetXY(code);
       if (!xy) continue;
       const ex = dotMap.get(code);
-      if (ex) ex.count++;
-      else dotMap.set(code, { xy, city: scGetCity(code), isTrain, count: 1 });
+      if (ex) ex.count++; else dotMap.set(code, { xy, isTrain, count: 1 });
     }
   });
 
-  dotMap.forEach(({ xy: [x, y], code, isTrain, count }: any) => {
-    const r = Math.min(6 + count, 11);
-    const col = isTrain ? "rgba(251,191,36,0.95)" : "rgba(125,209,252,0.95)";
-    ctx.save();
-    ctx.translate(0, HEADER_H);
+  dotMap.forEach(({ xy: [x, y], isTrain, count }, code) => {
+    const r = Math.min(7 + count, 13);
+    const col = isTrain ? "rgba(251,191,36,0.96)" : "rgba(125,209,252,0.96)";
     // halo
-    ctx.beginPath();
-    ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = isTrain ? "rgba(251,191,36,0.12)" : "rgba(125,209,252,0.12)";
-    ctx.fill();
+    mc.beginPath(); mc.arc(x, y, r * 2.6, 0, Math.PI * 2);
+    mc.fillStyle = isTrain ? "rgba(251,191,36,0.14)" : "rgba(125,209,252,0.14)";
+    mc.fill();
     // dot
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = col;
-    ctx.fill();
+    mc.beginPath(); mc.arc(x, y, r, 0, Math.PI * 2);
+    mc.fillStyle = col; mc.fill();
     // white center
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = "white";
-    ctx.fill();
-    ctx.restore();
+    mc.beginPath(); mc.arc(x, y, r * 0.38, 0, Math.PI * 2);
+    mc.fillStyle = "white"; mc.fill();
+    // label badge
+    const lx = x + 12, ly = y - 8;
+    const tw = code.length * 10 + 14;
+    mc.fillStyle = "rgba(3,7,18,0.88)";
+    mc.beginPath(); mc.roundRect(lx, ly - 18, tw, 22, 5); mc.fill();
+    mc.fillStyle = isTrain ? "rgba(253,230,138,0.97)" : "rgba(255,255,255,0.97)";
+    mc.font = "bold 14px -apple-system, 'Helvetica Neue', sans-serif";
+    mc.textAlign = "left";
+    mc.fillText(code, lx + 6, ly);
   });
 
-  // Code labels
-  dotMap.forEach(({ xy: [x, y], isTrain }: any, code: string) => {
-    ctx.save();
-    ctx.translate(0, HEADER_H);
-    const labelX = x + 10;
-    const labelY = y - 6;
-    const tw = code.length * 9 + 12;
-    const th = 20;
-    ctx.fillStyle = "rgba(3,7,18,0.86)";
-    ctx.beginPath();
-    ctx.roundRect(labelX, labelY - th + 4, tw, th, 4);
-    ctx.fill();
-    ctx.fillStyle = isTrain ? "rgba(253,230,138,0.95)" : "rgba(255,255,255,0.95)";
-    ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText(code, labelX + 6, labelY);
-    ctx.restore();
-  });
+  // Legend
+  const lx = SC_PAD + 4, ly = SC_MAP_H - SC_PAD - 60;
+  mc.fillStyle = "rgba(3,7,18,0.84)";
+  mc.beginPath(); mc.roundRect(lx, ly, 200, 56, 10); mc.fill();
+  mc.strokeStyle = "rgba(200,220,255,0.15)"; mc.lineWidth = 1; mc.stroke();
+  // flight
+  mc.strokeStyle = "rgba(125,209,252,0.92)"; mc.lineWidth = 4; mc.setLineDash([]);
+  mc.beginPath(); mc.moveTo(lx+14, ly+18); mc.lineTo(lx+58, ly+18); mc.stroke();
+  mc.fillStyle = "rgba(255,255,255,0.70)";
+  mc.font = "bold 13px -apple-system, 'Helvetica Neue', sans-serif"; mc.textAlign = "left";
+  mc.fillText("FLIGHT", lx + 66, ly + 23);
+  // rail
+  mc.strokeStyle = "rgba(251,191,36,0.92)"; mc.lineWidth = 3.5; mc.setLineDash([10,5]);
+  mc.beginPath(); mc.moveTo(lx+14, ly+38); mc.lineTo(lx+58, ly+38); mc.stroke();
+  mc.setLineDash([]);
+  mc.fillStyle = "rgba(255,255,255,0.70)";
+  mc.fillText("RAIL", lx + 66, ly + 43);
 
-  // --- Legend ---
-  const lx = SC_PAD, ly = HEADER_H + SC_MAP_H - 64;
-  ctx.fillStyle = "rgba(3,7,18,0.82)";
-  ctx.beginPath();
-  ctx.roundRect(lx, ly, 220, 52, 10);
-  ctx.fill();
-  // flight line
-  ctx.strokeStyle = "rgba(125,209,252,0.9)";
-  ctx.lineWidth = 4;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(lx + 14, ly + 18); ctx.lineTo(lx + 60, ly + 18);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("FLIGHT", lx + 68, ly + 23);
-  // rail line
-  ctx.strokeStyle = "rgba(251,191,36,0.9)";
-  ctx.lineWidth = 3.5;
-  ctx.setLineDash([10, 5]);
-  ctx.beginPath();
-  ctx.moveTo(lx + 14, ly + 38); ctx.lineTo(lx + 60, ly + 38);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.fillText("RAIL", lx + 68, ly + 43);
+  // Title overlay (bottom right)
+  mc.fillStyle = "rgba(255,255,255,0.85)";
+  mc.font = "bold 28px -apple-system, 'Helvetica Neue', sans-serif";
+  mc.textAlign = "right";
+  mc.fillText("Europe Routes", SC_W - SC_PAD, SC_MAP_H - SC_PAD - 32);
+  const fCount = euTrips.filter((t:any) => t.type !== "train").length;
+  const rCount = euTrips.filter((t:any) => t.type === "train").length;
+  mc.fillStyle = "rgba(125,209,252,0.65)";
+  mc.font = "500 18px -apple-system, 'Helvetica Neue', sans-serif";
+  mc.fillText(`${fCount} flights · ${rCount} rail`, SC_W - SC_PAD, SC_MAP_H - SC_PAD - 8);
 
-  // --- Trip Table ---
-  const tableY = HEADER_H + SC_MAP_H + 20;
+  // ── 4. Draw IMAGE 2 — the trip table ────────────────────────────
+  const ROW_H    = 58;
+  const HDR_H    = 72;
+  const COL_PAD  = 20;
   const cols = [
-    { label: "TYPE",        w: 130 },
-    { label: "FROM",        w: 220 },
-    { label: "TO",          w: 220 },
-    { label: "DATE",        w: 220 },
-    { label: "CARRIER",     w: 290 },
+    { label: "TYPE",     w: 120 },
+    { label: "FROM",     w: 220 },
+    { label: "TO",       w: 220 },
+    { label: "DATE",     w: 210 },
+    { label: "CARRIER",  w: 310 },
   ];
-  const totalW = cols.reduce((s, c) => s + c.w, 0);
-  const tableX = (SC_W - totalW) / 2;
-
-  // Table background
-  ctx.fillStyle = "rgba(6,16,32,0.96)";
-  ctx.beginPath();
-  ctx.roundRect(tableX - 16, tableY, totalW + 32, TABLE_H, 16);
-  ctx.fill();
-  ctx.strokeStyle = "rgba(226,232,240,0.09)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // Header row
-  ctx.fillStyle = "rgba(255,255,255,0.28)";
-  ctx.font = "bold 13px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-  ctx.textAlign = "left";
-  let cx = tableX;
-  cols.forEach(col => {
-    ctx.fillText(col.label, cx, tableY + 28);
-    cx += col.w;
-  });
-
-  // Separator
-  ctx.strokeStyle = "rgba(226,232,240,0.07)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(tableX - 16, tableY + 38);
-  ctx.lineTo(tableX + totalW + 16, tableY + 38);
-  ctx.stroke();
-
-  // Data rows
-  const sorted = [...euTrips].sort((a: any, b: any) =>
-    (a.departureDate || a.departure_date || "").localeCompare(
-     (b.departureDate || b.departure_date || ""))
+  const totalW  = cols.reduce((s,c) => s + c.w, 0);
+  const tblPad  = Math.max((SC_W - totalW) / 2, SC_PAD);
+  const sorted  = [...euTrips].sort((a:any,b:any) =>
+    (a.departureDate||a.departure_date||"").localeCompare(b.departureDate||b.departure_date||"")
   );
+  const tblH = HDR_H + 44 + ROW_H * sorted.length + 48;
+  const tblCanvas = document.createElement("canvas");
+  tblCanvas.width  = SC_W;
+  tblCanvas.height = tblH;
+  const tc = tblCanvas.getContext("2d")!;
+
+  // background
+  const bgGrad = tc.createLinearGradient(0, 0, 0, tblH);
+  bgGrad.addColorStop(0, "#071826"); bgGrad.addColorStop(1, "#040c18");
+  tc.fillStyle = bgGrad; tc.fillRect(0, 0, SC_W, tblH);
+
+  // Header text
+  tc.fillStyle = "rgba(255,255,255,0.90)";
+  tc.font = "bold 34px -apple-system, 'Helvetica Neue', sans-serif";
+  tc.textAlign = "left";
+  tc.fillText("Trip Log", SC_PAD, 48);
+  tc.fillStyle = "rgba(125,209,252,0.55)";
+  tc.font = "500 18px -apple-system, 'Helvetica Neue', sans-serif";
+  tc.fillText(`${sorted.length} segments`, SC_PAD, 68);
+
+  // Table card background
+  const cardY = HDR_H;
+  tc.fillStyle = "rgba(6,16,32,0.97)";
+  tc.beginPath(); tc.roundRect(SC_PAD - 10, cardY, SC_W - SC_PAD * 2 + 20, tblH - HDR_H - 16, 16); tc.fill();
+  tc.strokeStyle = "rgba(226,232,240,0.09)"; tc.lineWidth = 1; tc.stroke();
+
+  // Column headers
+  let cx = tblPad;
+  tc.fillStyle = "rgba(255,255,255,0.30)";
+  tc.font = "bold 13px -apple-system, 'Helvetica Neue', sans-serif";
+  tc.textAlign = "left";
+  cols.forEach(col => { tc.fillText(col.label, cx, cardY + 30); cx += col.w; });
+
+  // Header separator
+  tc.strokeStyle = "rgba(226,232,240,0.08)"; tc.lineWidth = 1;
+  tc.beginPath();
+  tc.moveTo(SC_PAD - 10, cardY + 40);
+  tc.lineTo(SC_W - SC_PAD + 10, cardY + 40);
+  tc.stroke();
+
+  // Rows
   sorted.forEach((t: any, i: number) => {
-    const ry = tableY + 38 + i * ROW_H + 14;
     const isTrain = t.type === "train";
-    const dep = t.departureCode || t.departure_code || "";
-    const arr = t.arrivalCode   || t.arrival_code   || "";
+    const dep     = t.departureCode || t.departure_code || "";
+    const arr     = t.arrivalCode   || t.arrival_code   || "";
     const depCity = t.departureCity || t.departure_city || dep;
     const arrCity = t.arrivalCity   || t.arrival_city   || arr;
     const date    = t.departureDate || t.departure_date || "";
     const carrier = isTrain
       ? (t.trainOperator || t.train_operator || "Rail")
       : (t.airline || "");
+    const ry = cardY + 44 + i * ROW_H;
 
     // Row separator
     if (i > 0) {
-      ctx.strokeStyle = "rgba(226,232,240,0.045)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(tableX - 16, ry - 14);
-      ctx.lineTo(tableX + totalW + 16, ry - 14);
-      ctx.stroke();
+      tc.strokeStyle = "rgba(226,232,240,0.05)"; tc.lineWidth = 1;
+      tc.beginPath(); tc.moveTo(SC_PAD - 10, ry); tc.lineTo(SC_W - SC_PAD + 10, ry); tc.stroke();
     }
 
-    cx = tableX;
-
+    cx = tblPad;
     // Type
-    ctx.font = "bold 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillStyle = isTrain ? "rgba(253,230,138,0.85)" : "rgba(186,230,253,0.85)";
-    ctx.textAlign = "left";
-    ctx.fillText(isTrain ? "✦ Rail" : "✈ Flight", cx, ry + 5);
-    cx += cols[0].w;
-
+    tc.font = "bold 14px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillStyle = isTrain ? "rgba(253,230,138,0.88)" : "rgba(186,230,253,0.88)";
+    tc.textAlign = "left";
+    tc.fillText(isTrain ? "✦ Rail" : "✈ Flight", cx, ry + 22); cx += cols[0].w;
     // From
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillText(depCity, cx, ry + 5);
-    ctx.fillStyle = "rgba(255,255,255,0.32)";
-    ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillText(dep, cx, ry + 22);
-    cx += cols[1].w;
-
+    tc.fillStyle = "rgba(255,255,255,0.92)";
+    tc.font = "bold 16px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillText(depCity, cx, ry + 20);
+    tc.fillStyle = "rgba(255,255,255,0.30)";
+    tc.font = "500 12px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillText(dep, cx, ry + 38); cx += cols[1].w;
     // To
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "bold 15px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillText(arrCity, cx, ry + 5);
-    ctx.fillStyle = "rgba(255,255,255,0.32)";
-    ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillText(arr, cx, ry + 22);
-    cx += cols[2].w;
-
+    tc.fillStyle = "rgba(255,255,255,0.92)";
+    tc.font = "bold 16px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillText(arrCity, cx, ry + 20);
+    tc.fillStyle = "rgba(255,255,255,0.30)";
+    tc.font = "500 12px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillText(arr, cx, ry + 38); cx += cols[2].w;
     // Date
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = "500 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillText(scFormatDate(date), cx, ry + 5);
-    cx += cols[3].w;
-
+    tc.fillStyle = "rgba(255,255,255,0.55)";
+    tc.font = "500 14px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillText(scFormatDate(date), cx, ry + 22); cx += cols[3].w;
     // Carrier
-    ctx.fillStyle = "rgba(255,255,255,0.42)";
-    ctx.font = "500 14px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-    ctx.fillText(carrier, cx, ry + 5);
+    tc.fillStyle = "rgba(255,255,255,0.42)";
+    tc.font = "500 14px -apple-system, 'Helvetica Neue', sans-serif";
+    tc.fillText(carrier, cx, ry + 22);
   });
 
   // Footer
-  ctx.fillStyle = "rgba(255,255,255,0.12)";
-  ctx.font = "500 16px -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("grandloopstudio.com", SC_W / 2, TOTAL_H - 16);
+  tc.fillStyle = "rgba(255,255,255,0.10)";
+  tc.font = "500 14px -apple-system, 'Helvetica Neue', sans-serif";
+  tc.textAlign = "center";
+  tc.fillText("grandloopstudio.com", SC_W / 2, tblH - 14);
 
-  // 4. Open PNG directly in browser
-  const dataUrl = canvas.toDataURL("image/png");
-  window.open(dataUrl, "_blank");
+  // ── 5. Open both images ─────────────────────────────────────────
+  window.open(mapCanvas.toDataURL("image/png"),   "_blank");
+  window.open(tblCanvas.toDataURL("image/png"),   "_blank");
 }
 
-/** Animated stat number */
 function AnimatedStat({ value, suffix }: { value: number; suffix?: string }) {
   const animated = useCountUp(value);
   return <>{animated.toLocaleString()}{suffix}</>;
