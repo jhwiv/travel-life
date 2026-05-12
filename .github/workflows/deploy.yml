@@ -34,6 +34,15 @@ jobs:
       - name: Preserve custom domain (CNAME)
         run: echo "www.grandloopstudio.com" > dist/public/CNAME
 
+      - name: Add cache-control headers
+        run: |
+          cat > dist/public/_headers << 'EOF'
+          /*
+            Cache-Control: no-cache, no-store, must-revalidate
+          /assets/*
+            Cache-Control: public, max-age=31536000, immutable
+          EOF
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
