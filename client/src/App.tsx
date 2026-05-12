@@ -12,7 +12,6 @@ import Dashboard from "@/pages/dashboard";
 import Trips from "@/pages/trips";
 import Infographics from "@/pages/infographics";
 import MapPage from "@/pages/map";
-import EuropeMapPage from "@/pages/europe-map";
 import {
   LayoutDashboard,
   Route as RouteIcon,
@@ -25,7 +24,6 @@ import {
   TrainFront,
   Plus,
   MapPin,
-  Globe,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -83,7 +81,6 @@ function TravelLifeLogo({ className = "w-7 h-7" }: { className?: string }) {
 const navItems = [
   { path: "/", label: "Home", icon: Home },
   { path: "/map", label: "Map", icon: Map },
-  { path: "/europe", label: "Europe", icon: Globe },
   { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/trips", label: "Trips", icon: RouteIcon },
   { path: "/infographics", label: "Infographics", icon: Image },
@@ -299,9 +296,6 @@ function App() {
                 </Route>
                 <Route path="/infographics">
                   {() => <WithSidebar><Infographics /></WithSidebar>}
-                </Route>
-                <Route path="/europe">
-                  {() => <WithSidebar><EuropeMapPage /></WithSidebar>}
                 </Route>
                 <Route component={NotFound} />
               </Switch>
